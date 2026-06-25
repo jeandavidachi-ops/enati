@@ -5,14 +5,14 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton
-from aiogram.filters import Command
+from aiogram.filters import Command, StateFilter
 
 from datetime import datetime, timedelta
 import re
 
 import app.keyboard as kb
 from app.db import Database
-from config import TOKEN, ADMIN_ID, MONGO_DB_URL
+from config import TOKEN, ADMIN_ID, MONGO_DB_URL, ADMIN_PASSWORD
 
 import app.dexscreenerAPI as dex
 import app.mongodb as md
@@ -30,6 +30,7 @@ db = Database('database.db')
 
 class userStates(StatesGroup):
     token_info = State()
+    reset_password = State()
 
 # ----------- START COMMAND ------------
 
@@ -174,7 +175,7 @@ async def cmd_token_info(message: Message, state: FSMContext):
 
 # --------------------------------------------------------- GROUP COMMANDS ------------------------------------------------------------------
 
-@user_handlers.message(F.text.regexp(r'([0-9a-zA-Z]{20})'))
+@user_handlers.message(StateFilter(None), F.text.regexp(r'([0-9a-zA-Z]{20})'))
 async def handle_contract_address(message: Message, state: FSMContext):
 
     await message.answer('Processing... ⚔️⚔️⚔️')
@@ -265,10 +266,21 @@ async def cmd_rank(message: Message, state: FSMContext):
 @user_handlers.message(F.text.startswith('/reset'))
 async def cmd_reset(message: Message, state: FSMContext):
     user_id = message.from_user.id
-    
+
     if user_id in ADMIN_ID:
+        await message.answer("🔒 Enter the reset password:")
+        await state.set_state(userStates.reset_password)
+
+
+@user_handlers.message(userStates.reset_password)
+async def cmd_reset_confirm(message: Message, state: FSMContext):
+    if message.text == ADMIN_PASSWORD:
         users_collection.delete_many({})
         await message.answer("🔄 *All groups have been reset.*", parse_mode='Markdown')
+    else:
+        await message.answer("❌ Password is wrong.")
+
+    await state.clear()
         
 @user_handlers.message(F.text.startswith('/help'))
 async def cmd_reset(message: Message, state: FSMContext):
