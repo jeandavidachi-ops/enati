@@ -8,6 +8,10 @@ WIN_RATIO = 2       # x2 du market cap initial  -> win
 DEFEAT_RATIO = 0.2  # -80% du market cap initial -> defeat
 MAX_TRACK_HOURS = 48  # au-dela, un token qui stagne sort en defeat
 
+# Classement canonique partage par /rank ET le leaderboard, pour qu'ils soient corrules :
+# d'abord les wins, puis le score (X cumules), puis le moins de defeats, puis l'id (stable).
+RANK_SORT = [('total_wins', -1), ('total_current_stat', -1), ('total_defeat', 1), ('_id', 1)]
+
 from config import MONGO_DB_URL
 
 # MongoDB connection setup
@@ -113,21 +117,23 @@ async def process_active_tokens():
 
 
 def get_top_groups_by_wins():
-    # Use an aggregation pipeline to group by group_name, sum the fields, and sort by wins
+    # Groupe par group_id (et non group_name, pour ne pas fusionner deux groupes homonymes
+    # ni casser un groupe renomme) et trie selon le classement canonique RANK_SORT.
     pipeline = [
         {
             '$group': {
-                '_id': '$group_name',  # Group by group_name
+                '_id': '$group_id',
+                'group_name': {'$first': '$group_name'},
                 'total_wins': {'$sum': '$wins'},
                 'total_defeat': {'$sum': '$defeat'},
                 'total_current_stat': {'$sum': '$current_stat'}
             }
         },
         {
-            '$sort': {'total_wins': -1}  # Sort by total_wins in descending order
+            '$sort': dict(RANK_SORT)
         },
         {
-            '$limit': 10  # Limit to the top 10 groups
+            '$limit': 10
         }
     ]
     
@@ -136,55 +142,28 @@ def get_top_groups_by_wins():
     
     return top_groups
 
+def _ranked_groups():
+    # Liste de tous les groupes, tries selon le classement canonique (RANK_SORT).
+    return list(users_collection.aggregate([
+        {
+            '$group': {
+                '_id': '$group_id',
+                'total_wins': {'$sum': '$wins'},
+                'total_current_stat': {'$sum': '$current_stat'},
+                'total_defeat': {'$sum': '$defeat'},
+            }
+        },
+        {'$sort': dict(RANK_SORT)},
+    ]))
+
+
 def get_group_position_by_wins(group_id):
-    # First, retrieve the total wins for the specified group
-    group_stats = users_collection.aggregate([
-        {
-            '$match': {'group_id': group_id}
-        },
-        {
-            '$group': {
-                '_id': '$group_id',
-                'total_wins': {'$sum': '$wins'}
-            }
-        }
-    ])
-
-    group_stats = list(group_stats)
-    
-    if not group_stats:
-        return f"Group {group_id} not found."
-    
-    total_wins = group_stats[0]['total_wins']
-    
-    # Now, count how many groups have more total_wins than this group
-    position = users_collection.aggregate([
-        {
-            '$group': {
-                '_id': '$group_id',
-                'total_wins': {'$sum': '$wins'}
-            }
-        },
-        {
-            '$match': {
-                'total_wins': {'$gt': total_wins}
-            }
-        },
-        {
-            '$count': 'higher_wins_count'
-        }
-    ])
-
-    position_list = list(position)
-    
-    # If no groups have more wins, this group is in the first position
-    if position_list:
-        # The position will be 1 + the number of groups with higher wins
-        rank = position_list[0]['higher_wins_count'] + 1
-    else:
-        rank = 1  # This group has the highest wins
-    
-    return rank
+    # Rang = position exacte du groupe dans le classement canonique (meme ordre que le leaderboard).
+    groups = _ranked_groups()
+    for index, group in enumerate(groups):
+        if group['_id'] == group_id:
+            return index + 1
+    return f"Group {group_id} not found."
 
 def sum_current_stat_for_group(group_id):
     # Define the query to find all documents for the specified group_name

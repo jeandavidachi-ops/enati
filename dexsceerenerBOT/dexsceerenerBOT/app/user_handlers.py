@@ -89,7 +89,7 @@ async def cmd_leaderboard(message: Message, state: FSMContext):
         emoji = '🥇' if place == 1 else '🥈' if place == 2 else '🥉' if place == 3 else ''
         position = 'st' if place == 1 else 'nd' if place == 2 else 'rd' if place == 3 else 'th'
         leaderboard_text += (
-            f"{emoji} *{place}{position} Place:* {group['_id']}\n"
+            f"{emoji} *{place}{position} Place:* {group.get('group_name', 'Unknown')}\n"
             f"🔥 Currect Stat: *{group['total_current_stat']}x*\n"
             f"🏆 Wins: *{group['total_wins']}*\n"
             f"💀 Defeat: *{group['total_defeat']}*\n\n"

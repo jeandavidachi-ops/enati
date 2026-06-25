@@ -51,7 +51,8 @@ def get_top_groups_by_wins():
             }
         },
         {
-            '$sort': {'total_wins': -1}  # Sort by total_wins in descending order
+            # Classement canonique: wins, puis score, puis moins de defeats, puis id (stable).
+            '$sort': {'total_wins': -1, 'total_current_stat': -1, 'total_defeat': 1, '_id': 1}
         },
         {
             '$limit': 3  # Limit to the top 3 groups
@@ -256,7 +257,8 @@ def get_all_groups_stats():
                 }
             },
             {
-                '$sort': {'total_wins': -1}  # Сортировка по количеству побед
+                # Meme classement canonique que /rank et le reste du leaderboard.
+                '$sort': {'total_wins': -1, 'max_current_stat': -1, 'total_defeats': 1, '_id': 1}
             }
         ]
         
