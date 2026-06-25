@@ -167,23 +167,42 @@ def health_check():
         'message': 'Server is running'
     }), 200
 
+def get_pumpfun_image(contract_address):
+    """
+    Secours : recupere l'image via l'API pump.fun (gratuite, sans cle) quand DexScreener
+    n'a pas d'image. Couvre les tokens pump.fun (la plupart des tokens du projet).
+    """
+    try:
+        url = f'https://frontend-api-v3.pump.fun/coins/{contract_address}'
+        r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            if data.get('image_uri'):
+                return {
+                    'success': True,
+                    'image_url': data['image_uri'],
+                    'token_name': data.get('name'),
+                    'token_symbol': data.get('symbol'),
+                }
+    except Exception as e:
+        logger.warning(f"pumpfun image fallback failed for {contract_address}: {e}")
+    return {'success': False, 'error': 'No image found (DexScreener + pump.fun)'}
+
+
 def get_token_image(contract_address):
     """
-    Получает URL изображения токена по контрактному адресу
+    Recupere l'URL de l'image d'un token. DexScreener en priorite, puis pump.fun en secours.
     """
     try:
         url = f'https://api.dexscreener.com/latest/dex/tokens/{contract_address}'
         response = requests.get(url)
-        
+
         if response.status_code == 200:
             data = response.json()
-            
-            # Проверяем, есть ли пары
+
+            # On prend la premiere paire (la plus active) si elle a une image.
             if 'pairs' in data and len(data['pairs']) > 0:
-                # Берем первую пару (обычно самая активная)
                 first_pair = data['pairs'][0]
-                
-                # Проверяем, есть ли информация об изображении
                 if 'info' in first_pair and 'imageUrl' in first_pair['info']:
                     return {
                         'success': True,
@@ -191,27 +210,13 @@ def get_token_image(contract_address):
                         'token_name': first_pair['baseToken']['name'],
                         'token_symbol': first_pair['baseToken']['symbol']
                     }
-                else:
-                    return {
-                        'success': False,
-                        'error': 'Image URL not found for this token'
-                    }
-            else:
-                return {
-                    'success': False,
-                    'error': 'No trading pairs found for this token'
-                }
-        else:
-            return {
-                'success': False,
-                'error': f'API request failed with status code: {response.status_code}'
-            }
-            
+
+        # Pas d'image cote DexScreener -> secours pump.fun.
+        return get_pumpfun_image(contract_address)
+
     except Exception as e:
-        return {
-            'success': False,
-            'error': f'Error fetching token image: {str(e)}'
-        }
+        logger.warning(f"DexScreener image failed for {contract_address}: {e}, trying pump.fun")
+        return get_pumpfun_image(contract_address)
 
 @app.route('/api/token-image/<contract_address>', methods=['GET'])
 def get_token_image_endpoint(contract_address):
