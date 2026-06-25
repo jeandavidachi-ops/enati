@@ -231,6 +231,16 @@ def get_group_wins(group_id):
     
     return total_wins
 
+def migrate_group_id(old_group_id, new_group_id):
+    # Quand un groupe basique passe en supergroupe, son id change.
+    # On reporte le nouvel id sur tous les documents de l'ancien.
+    result = users_collection.update_many(
+        {'group_id': old_group_id},
+        {'$set': {'group_id': new_group_id}}
+    )
+    return result.modified_count
+
+
 def get_group_defeats(group_id):
     # Somme des defeats sur TOUS les tokens du groupe (et non un seul document).
     pipeline = [
