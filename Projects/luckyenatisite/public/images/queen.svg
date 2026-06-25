@@ -1,0 +1,37 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Chess Queen - Black outline on white background -->
+  <!-- Base -->
+  <ellipse cx="100" cy="180" rx="40" ry="15" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Main body -->
+  <path d="M60 180 L70 140 Q80 120 100 115 Q120 120 130 140 L140 180 Z" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Upper body -->
+  <path d="M70 140 L80 100 Q90 80 100 75 Q110 80 120 100 L130 140 Z" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Neck -->
+  <rect x="85" y="75" width="30" height="25" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Crown base -->
+  <ellipse cx="100" cy="70" rx="40" ry="12" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Crown points -->
+  <path d="M60 70 L65 40 L70 70 Z" fill="white" stroke="black" stroke-width="4"/>
+  <path d="M70 70 L75 35 L80 70 Z" fill="white" stroke="black" stroke-width="4"/>
+  <path d="M80 70 L85 30 L90 70 Z" fill="white" stroke="black" stroke-width="4"/>
+  <path d="M90 70 L95 25 L100 70 Z" fill="white" stroke="black" stroke-width="4"/>
+  <path d="M100 70 L105 25 L110 70 Z" fill="white" stroke="black" stroke-width="4"/>
+  <path d="M110 70 L115 30 L120 70 Z" fill="white" stroke="black" stroke-width="4"/>
+  <path d="M120 70 L125 35 L130 70 Z" fill="white" stroke="black" stroke-width="4"/>
+  <path d="M130 70 L135 40 L140 70 Z" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Crown details -->
+  <circle cx="100" cy="35" r="10" fill="black" stroke="black" stroke-width="2"/>
+  <circle cx="85" cy="40" r="5" fill="black" stroke="black" stroke-width="2"/>
+  <circle cx="115" cy="40" r="5" fill="black" stroke="black" stroke-width="2"/>
+  
+  <!-- Crown details white -->
+  <circle cx="100" cy="35" r="6" fill="white"/>
+  <circle cx="85" cy="40" r="3" fill="white"/>
+  <circle cx="115" cy="40" r="3" fill="white"/>
+</svg>

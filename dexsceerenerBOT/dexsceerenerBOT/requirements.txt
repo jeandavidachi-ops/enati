@@ -1,0 +1,6 @@
+aiogram
+aiocron
+pymongo
+dnspython
+requests
+python-dotenv

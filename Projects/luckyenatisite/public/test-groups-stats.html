@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groups Stats Test - ENATI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #000000;
+            color: #ffffff;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .stat-title {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #8b5cf6;
+        }
+        .groups-table {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .table-header {
+            display: grid;
+            grid-template-columns: 50px 2fr 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            padding: 15px;
+            background: #2a2a2a;
+            border-bottom: 1px solid #333;
+            font-weight: bold;
+            color: #888;
+        }
+        .table-row {
+            display: grid;
+            grid-template-columns: 50px 2fr 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            padding: 15px;
+            border-bottom: 1px solid #333;
+            transition: background-color 0.3s ease;
+        }
+        .table-row:hover {
+            background: #2a2a2a;
+        }
+        .table-row:last-child {
+            border-bottom: none;
+        }
+        .group-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .group-photo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .win-rate {
+            color: #10b981;
+        }
+        .win-rate.low {
+            color: #ef4444;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #ef4444;
+        }
+        .refresh-btn {
+            background: linear-gradient(135deg, #8b5cf6, #f97316);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .refresh-btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>Groups Statistics Test</h1>
+            <p>Testing the new all-groups-stats API endpoint</p>
+            <button class="refresh-btn" onclick="loadGroupsStats()">Refresh Data</button>
+        </div>
+        
+        <div id="stats-summary" class="stats-grid">
+            <!-- Summary stats will be displayed here -->
+        </div>
+        
+        <div id="groups-table" class="groups-table">
+            <!-- Groups data will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        async function loadGroupsStats() {
+            const statsSummary = document.getElementById('stats-summary');
+            const groupsTable = document.getElementById('groups-table');
+            
+            // Show loading state
+            statsSummary.innerHTML = '<div class="loading">Loading summary statistics...</div>';
+            groupsTable.innerHTML = '<div class="loading">Loading groups data...</div>';
+            
+            try {
+                const response = await fetch('/api/all-groups-stats');
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayStatsSummary(result);
+                    displayGroupsTable(result.data);
+                } else {
+                    showError(`API Error: ${result.message}`);
+                }
+            } catch (error) {
+                showError(`Network Error: ${error.message}`);
+            }
+        }
+
+        function displayStatsSummary(result) {
+            const statsSummary = document.getElementById('stats-summary');
+            const data = result.data;
+            
+            // Calculate summary statistics
+            const totalGroups = data.length;
+            const totalWins = data.reduce((sum, group) => sum + group.total_wins, 0);
+            const totalDefeats = data.reduce((sum, group) => sum + group.total_defeats, 0);
+            const avgWinRate = data.reduce((sum, group) => sum + group.win_rate, 0) / totalGroups;
+            const maxMultiplier = Math.max(...data.map(group => group.max_current_stat));
+            
+            statsSummary.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-title">Total Groups</div>
+                    <div class="stat-value">${totalGroups}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Total Wins</div>
+                    <div class="stat-value">${totalWins}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Total Defeats</div>
+                    <div class="stat-value">${totalDefeats}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Average Win Rate</div>
+                    <div class="stat-value">${avgWinRate.toFixed(1)}%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Max Multiplier</div>
+                    <div class="stat-value">${maxMultiplier}X</div>
+                </div>
+            `;
+        }
+
+        function displayGroupsTable(groups) {
+            const groupsTable = document.getElementById('groups-table');
+            
+            if (groups.length === 0) {
+                groupsTable.innerHTML = '<div class="loading">No groups found</div>';
+                return;
+            }
+            
+            const tableHTML = `
+                <div class="table-header">
+                    <div>#</div>
+                    <div>Group</div>
+                    <div>Win Rate</div>
+                    <div>Max Multiplier</div>
+                    <div>Total Games</div>
+                    <div>Members</div>
+                </div>
+                ${groups.map((group, index) => `
+                    <div class="table-row">
+                        <div>${index + 1}</div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="group-avatar">
+                                ${(() => {
+                                    let groupPhotoUrl = group.group_photo;
+                                    if (groupPhotoUrl && groupPhotoUrl.startsWith('@')) {
+                                        groupPhotoUrl = groupPhotoUrl.substring(1);
+                                    }
+                                    return groupPhotoUrl ? `<img src="${groupPhotoUrl}" alt="${group.group_name}" class="group-photo">` : '';
+                                })()}
+                            </div>
+                            <span>${group.group_name}</span>
+                        </div>
+                        <div class="win-rate ${group.win_rate < 50 ? 'low' : ''}">${group.win_rate.toFixed(1)}%</div>
+                        <div>${group.max_current_stat}X</div>
+                        <div>${group.total_wins + group.total_defeats}</div>
+                        <div>${group.total_members}</div>
+                    </div>
+                `).join('')}
+            `;
+            
+            groupsTable.innerHTML = tableHTML;
+        }
+
+        function showError(message) {
+            const statsSummary = document.getElementById('stats-summary');
+            const groupsTable = document.getElementById('groups-table');
+            
+            statsSummary.innerHTML = `<div class="error">${message}</div>`;
+            groupsTable.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGroupsStats();
+        });
+    </script>
+</body>
+</html>

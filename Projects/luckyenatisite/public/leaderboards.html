@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEADERBOARDS - ENATI</title>
+    <link rel="stylesheet" href="css/leaderboards.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Preloader -->
+    <div class="preloader" id="preloader">
+        <div class="preloader-content">
+            <div class="preloader-logo">
+                <img src="images/logo.png" alt="ENATI Logo">
+                <span class="preloader-logo-text">ENATI</span>
+            </div>
+            <div class="preloader-spinner"></div>
+            <div class="preloader-text">Loading leaderboards...</div>
+            <div class="preloader-progress">
+                <div class="preloader-progress-bar" id="progressBar"></div>
+            </div>
+            <div class="preloader-chess-pieces">
+                <div class="chess-piece-loader">
+                    <img src="images/king.svg" alt="King">
+                </div>
+                <div class="chess-piece-loader">
+                    <img src="images/queen.svg" alt="Queen">
+                </div>
+                <div class="chess-piece-loader">
+                    <img src="images/rook.svg" alt="Rook">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-sword-crossed"></i>
+                </div>
+                <span class="logo-text">ENATI</span>
+            </div>
+            <div class="header-controls">
+                <button class="back-btn" onclick="window.location.href='index.html'">
+                    <i class="fas fa-arrow-left"></i>
+                    Back
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="content-container">
+            <!-- Title and Controls -->
+            <div class="top-section">
+                <h1 class="main-title">LEADERBOARDS</h1>
+                <div class="controls">
+                    <div class="search-container">
+                        <input type="text" class="search-input" id="coinSearchInput" placeholder="Search coins by name...">
+                        <i class="fas fa-search search-icon"></i>
+                        <div class="search-results" id="searchResults"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leaderboard Table -->
+            <div class="leaderboard-table">
+                <div class="table-header">
+                    <div class="header-cell">POSITION</div>
+                    <div class="header-cell">GROUP</div>
+                    <div class="header-cell sortable">
+                        WIN RATE
+                        <i class="fas fa-arrow-up sort-icon"></i>
+                    </div>
+                    <div class="header-cell">HIGHEST MULTIPLIER</div>
+                    <div class="header-cell">DUELS WON</div>
+                    <div class="header-cell">ACTION</div>
+                </div>
+
+                <div class="table-body">
+                    <!-- Data will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <div class="social-links">
+                        <a href="https://t.me/enaticommunity" class="social-link" target="_blank">telegram</a>
+                        <a href="#" class="social-link">twitter</a>
+                    </div>
+                </div>
+                <div class="footer-center">
+                    <div class="developer-info">
+                        <span class="developed-by">Developed by</span>
+                        <span class="developer-name">Illya Ostrovskyi</span>
+                        <a href="mailto:illya.ostrovskyi@gmail.com" class="developer-email">
+                            <i class="fas fa-envelope"></i>
+                            illya.ostrovskyi@gmail.com
+                        </a>
+                    </div>
+                </div>
+                <div class="footer-right">
+                    <div class="page-indicator">
+                        <span class="page-number">- 02</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/leaderboards.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Secrets — ne jamais versionner
+.env
+*.env
+!*.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.db
+
+# Node
+node_modules/
+
+# Archives
+*.rar
