@@ -33,6 +33,32 @@ def get_token_name(contract_address):
     return None
 
 
+def get_token_image_url(contract_address):
+    """
+    URL de l'image d'un token : DexScreener d'abord, puis pump.fun en secours
+    (gratuit, sans cle). Renvoie None si aucune image trouvee.
+    """
+    info = get_token_info(contract_address)
+    if info:
+        for pair in info.get('pairs', []):
+            img = (pair.get('info') or {}).get('imageUrl')
+            if img:
+                return img
+
+    # Secours pump.fun (couvre les tokens pump.fun absents de DexScreener).
+    try:
+        r = requests.get(
+            f'https://frontend-api-v3.pump.fun/coins/{contract_address}',
+            headers={'User-Agent': 'Mozilla/5.0'}, timeout=10
+        )
+        if r.status_code == 200:
+            return r.json().get('image_uri')
+    except requests.RequestException:
+        pass
+
+    return None
+
+
 def get_marketcaps_batch(addresses):
     """
     Recupere le market cap (fdv) de plusieurs tokens en une seule requete.

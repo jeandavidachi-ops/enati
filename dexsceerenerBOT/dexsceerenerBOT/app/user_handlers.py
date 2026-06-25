@@ -219,7 +219,16 @@ async def handle_contract_address(message: Message, state: FSMContext):
             f"⚡️ *Current Score (X's):* {group_current_stat}x\n"
         )
 
-        await message.answer(info_message, parse_mode='Markdown')
+        image_url = dex.get_token_image_url(address)
+        if image_url:
+            try:
+                await bot.send_photo(message.chat.id, photo=image_url,
+                                     caption=info_message, parse_mode='Markdown')
+            except Exception:
+                # Image injoignable (URL invalide / IPFS lent) -> carte en texte seul.
+                await message.answer(info_message, parse_mode='Markdown')
+        else:
+            await message.answer(info_message, parse_mode='Markdown')
         await message.answer('⚔️ Ranking ✅')
     else:
         # Token introuvable sur DexScreener -> on ne l'enregistre pas (pas de suivi possible).
