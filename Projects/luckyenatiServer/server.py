@@ -15,7 +15,21 @@ load_dotenv(Path(__file__).resolve().parent / '.env')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+# Le frontend (pages + assets) est dans le dossier voisin luckyenatisite/public.
+PUBLIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'luckyenatisite', 'public')
+
+app = Flask(__name__, static_folder=PUBLIC_DIR, static_url_path='')
+
+
+@app.route('/')
+def home():
+    return app.send_static_file('index.html')
+
+
+@app.route('/leaderboards')
+def leaderboards_page():
+    return app.send_static_file('leaderboards.html')
+
 
 # MongoDB connection setup
 MONGO_DB_URL = os.environ['MONGO_DB_URL']
@@ -451,4 +465,6 @@ if __name__ == '__main__':
     # debug desactive par defaut (ne jamais exposer le debugger Werkzeug en public).
     # Mets FLASK_DEBUG=1 dans .env uniquement en local pour developper.
     debug = os.environ.get('FLASK_DEBUG', '0') == '1'
-    app.run(debug=debug, host='127.0.0.1', port=5000)
+    # Railway fournit le port via $PORT et exige une ecoute sur 0.0.0.0.
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=debug, host='0.0.0.0', port=port)
