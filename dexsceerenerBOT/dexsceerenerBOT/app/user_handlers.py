@@ -6,9 +6,11 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton
 from aiogram.filters import Command, StateFilter
+from aiogram.exceptions import TelegramMigrateToChat
 
 from datetime import datetime, timedelta
 import re
+import time
 
 import app.keyboard as kb
 from app.db import Database
@@ -175,7 +177,7 @@ async def cmd_token_info(message: Message, state: FSMContext):
 
 # --------------------------------------------------------- GROUP COMMANDS ------------------------------------------------------------------
 
-@user_handlers.message(StateFilter(None), F.text.regexp(r'([0-9a-zA-Z]{20})'))
+@user_handlers.message(StateFilter(None), ~F.text.startswith('/'), F.text.regexp(r'([0-9a-zA-Z]{20})'))
 async def handle_contract_address(message: Message, state: FSMContext):
 
     await message.answer('Processing... ⚔️⚔️⚔️')
@@ -291,6 +293,84 @@ async def cmd_reset_confirm(message: Message, state: FSMContext):
 
     await state.clear()
         
+# ---------- POKE (message inter-groupes) ----------
+
+POKE_COOLDOWN = 30  # secondes entre deux pokes pour un meme groupe (anti-spam)
+_poke_last = {}     # group_id -> timestamp du dernier poke envoye
+
+
+@user_handlers.message(Command('poke'))
+async def cmd_poke(message: Message, state: FSMContext):
+    # Doit etre utilise dans un groupe.
+    if message.chat.type not in ('group', 'supergroup'):
+        await message.answer("Use /poke inside a group.")
+        return
+
+    parts = message.text.split(maxsplit=1)
+    if len(parts) < 2 or not parts[1].strip():
+        await message.answer("Usage: /poke <group name> <message>")
+        return
+    rest = parts[1].strip()
+
+    sender_id = message.chat.id
+    groups = md.get_ranked_groups()
+    rank_of = {g['_id']: i + 1 for i, g in enumerate(groups)}
+
+    if sender_id not in rank_of:
+        await message.answer("Your group isn't ranked yet. Scan a token first.")
+        return
+
+    # Anti-spam: cooldown par groupe.
+    now = time.time()
+    elapsed = now - _poke_last.get(sender_id, 0)
+    if elapsed < POKE_COOLDOWN:
+        await message.answer(f"⏳ Slow down — wait {int(POKE_COOLDOWN - elapsed)}s before poking again.")
+        return
+
+    # Cible par nom : on prend le nom de groupe le plus long qui prefixe le texte (gere les espaces).
+    rest_lower = rest.lower()
+    candidates = [
+        g for g in groups
+        if g.get('group_name') and g['_id'] != sender_id
+        and rest_lower.startswith(g['group_name'].lower())
+    ]
+    if not candidates:
+        await message.answer("Group not found.")
+        return
+    target = max(candidates, key=lambda g: len(g['group_name']))
+    poke_msg = rest[len(target['group_name']):].strip()
+    if not poke_msg:
+        await message.answer("Add a message after the group name.")
+        return
+
+    sender_rank = rank_of[sender_id]
+    target_rank = rank_of[target['_id']]
+    if target_rank <= sender_rank:
+        await message.answer("You can only poke groups ranked below yours.")
+        return
+
+    sender_title = message.chat.title or "A group"
+    text = f"📣 Poke from {sender_title} (#{sender_rank}):\n\n{poke_msg}"
+
+    try:
+        await bot.send_message(target['_id'], text)
+    except TelegramMigrateToChat as e:
+        # Le groupe cible est devenu un supergroupe -> on corrige l'id et on renvoie.
+        new_id = e.migrate_to_chat_id
+        md.migrate_group_id(target['_id'], new_id)
+        try:
+            await bot.send_message(new_id, text)
+        except Exception:
+            await message.answer("Couldn't reach that group (the bot may not be a member).")
+            return
+    except Exception:
+        await message.answer("Couldn't reach that group (the bot may not be a member).")
+        return
+
+    _poke_last[sender_id] = now
+    await message.answer(f"✅ Poke sent to {target['group_name']}.")
+
+
 @user_handlers.message(F.text.startswith('/help'))
 async def cmd_reset(message: Message, state: FSMContext):
     message_text = (
@@ -299,6 +379,7 @@ async def cmd_reset(message: Message, state: FSMContext):
         "/wins – Displays the group's total wins (number of tokens that reached 2x of their call). 🏆\n\n"
         "/rank – Shows the group's current ranking on the leaderboard. 📈\n\n"
         "/defeats – Lists the number of tokens that dropped to -80% of their call. 💀\n\n"
+        "/poke <group> <message> – Send a message to a group ranked below yours. 📣\n\n"
         "💬 Community & Support:\n\n"
         "Support Group: [Join here 💡](https://t.me/enatisupport)\n\n"
         "Enati Community: [Join here 🚀](https://t.me/enaticommunity)\n\n"

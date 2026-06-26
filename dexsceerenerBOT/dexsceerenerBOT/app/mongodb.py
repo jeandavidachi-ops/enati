@@ -148,6 +148,7 @@ def _ranked_groups():
         {
             '$group': {
                 '_id': '$group_id',
+                'group_name': {'$first': '$group_name'},
                 'total_wins': {'$sum': '$wins'},
                 'total_current_stat': {'$sum': '$current_stat'},
                 'total_defeat': {'$sum': '$defeat'},
@@ -155,6 +156,12 @@ def _ranked_groups():
         },
         {'$sort': dict(RANK_SORT)},
     ]))
+
+
+def get_ranked_groups():
+    # Version publique : meme liste triee (canonique), avec group_id, group_name et stats.
+    # L'index dans la liste (+1) = le rang du groupe (utilise par /poke et /rank).
+    return _ranked_groups()
 
 
 def get_group_position_by_wins(group_id):
