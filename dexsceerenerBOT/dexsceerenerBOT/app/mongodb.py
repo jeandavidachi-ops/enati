@@ -19,6 +19,7 @@ from config import MONGO_DB_URL
 client = MongoClient(MONGO_DB_URL)
 db = client['enati']
 users_collection = db['coins']
+monitoring_collection = db['monitoring']  # compteur des tokens actuellement monitores
 
 def add_or_update_coin(contract_address, coin_name, market_cap, wins, defeat, currect_stat, creation_time, group_name, group_id, group_photo):
     # Define the query to check if a document with the given contract_address and group_id exists
@@ -61,6 +62,14 @@ async def process_active_tokens():
     - Met aussi a jour current_stat (plus haut multiple atteint).
     """
     active = list(users_collection.find({'wins': 0, 'defeat': 0}))
+
+    # Compteur de monitoring (reecrit a chaque tick, y compris 0).
+    monitoring_collection.update_one(
+        {'_id': 'status'},
+        {'$set': {'monitored_tokens': len(active)}},
+        upsert=True,
+    )
+
     if not active:
         return []
 
