@@ -18,23 +18,20 @@ async def market_watcher():
         try:
             events = await md.process_active_tokens()
             for ev in events or []:
-                if ev['verdict'] == 'win':
-                    text = f"🏆 *WIN!* {ev['coin_name']} reached {ev['stat']}x from its call 🚀"
-                else:
-                    text = f"💀 *DEFEAT* {ev['coin_name']} dropped to -80% of its call ❌"
+                text = f"🚀 {ev['coin_name']} just hit {ev['multiple']}x! 🔥"
                 try:
-                    await bot.send_message(ev['group_id'], text, parse_mode='Markdown')
+                    await bot.send_message(ev['group_id'], text)
                 except TelegramMigrateToChat as e:
                     # Le groupe est devenu un supergroupe -> nouvel id. On corrige et on renvoie.
                     new_id = e.migrate_to_chat_id
                     md.migrate_group_id(ev['group_id'], new_id)
                     print(f"group {ev['group_id']} migrated -> {new_id}, retrying")
                     try:
-                        await bot.send_message(new_id, text, parse_mode='Markdown')
+                        await bot.send_message(new_id, text)
                     except Exception as e2:
-                        print('send verdict error after migrate:', e2)
+                        print('send milestone error after migrate:', e2)
                 except Exception as e:
-                    print('send verdict error:', e)
+                    print('send milestone error:', e)
         except Exception as e:
             print('watcher error:', e)
         await asyncio.sleep(WATCH_INTERVAL)

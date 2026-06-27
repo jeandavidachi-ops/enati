@@ -50,9 +50,10 @@ def get_top_groups_by_wins():
                 'total_current_stat': {'$sum': '$current_stat'}
             }
         },
+        {'$addFields': {'score': {'$subtract': ['$total_current_stat', '$total_defeat']}}},
         {
-            # Classement canonique: wins, puis score, puis moins de defeats, puis id (stable).
-            '$sort': {'total_wins': -1, 'total_current_stat': -1, 'total_defeat': 1, '_id': 1}
+            # Classement canonique: score (current_stat - defeats), puis wins, puis id (stable).
+            '$sort': {'score': -1, 'total_wins': -1, '_id': 1}
         },
         {
             '$limit': 3  # Limit to the top 3 groups
@@ -241,9 +242,14 @@ def get_all_groups_stats():
                     'group_photo': {'$first': '$group_photo'},  # Предполагаем, что есть поле group_photo
                     'total_wins': {'$sum': '$wins'},
                     'total_defeats': {'$sum': '$defeat'},
+                    'total_current_stat': {'$sum': '$current_stat'},
                     'max_current_stat': {'$max': '$current_stat'},
                     'total_members': {'$sum': 1}  # Количество записей в группе
                 }
+            },
+            {
+                # Score effectif = somme(current_stat) - defaites (meme definition que /rank).
+                '$addFields': {'score': {'$subtract': ['$total_current_stat', '$total_defeats']}}
             },
             {
                 '$addFields': {
@@ -263,7 +269,7 @@ def get_all_groups_stats():
             },
             {
                 # Meme classement canonique que /rank et le reste du leaderboard.
-                '$sort': {'total_wins': -1, 'max_current_stat': -1, 'total_defeats': 1, '_id': 1}
+                '$sort': {'score': -1, 'total_wins': -1, '_id': 1}
             }
         ]
         

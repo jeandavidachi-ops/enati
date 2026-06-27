@@ -8,9 +8,10 @@ WIN_RATIO = 2       # x2 du market cap initial  -> win
 DEFEAT_RATIO = 0.2  # -80% du market cap initial -> defeat
 MAX_TRACK_HOURS = 48  # au-dela, un token qui stagne sort en defeat
 
-# Classement canonique partage par /rank ET le leaderboard, pour qu'ils soient corrules :
-# d'abord les wins, puis le score (X cumules), puis le moins de defeats, puis l'id (stable).
-RANK_SORT = [('total_wins', -1), ('total_current_stat', -1), ('total_defeat', 1), ('_id', 1)]
+# Classement canonique partage par /rank ET le leaderboard, pour qu'ils soient correles.
+# score effectif d'un groupe = somme(current_stat) - nombre de defeats (chaque defaite = -1).
+# Ordre : score desc, puis wins desc, puis group_id (stable). Applique apres un $addFields 'score'.
+RANK_SORT = [('score', -1), ('total_wins', -1), ('_id', 1)]
 
 from config import MONGO_DB_URL
 
@@ -67,51 +68,53 @@ async def process_active_tokens():
     marketcaps = dex.get_marketcaps_batch(addresses)
 
     now = datetime.now()
-    events = []  # verdicts de ce tick, remontes a run.py pour annonce dans le groupe
+    events = []  # paliers atteints ce tick, remontes a run.py pour annonce dans le groupe
 
     for token in active:
         addr = token['contract_address']
         initial = token.get('market_cap')
         current = marketcaps.get(addr)
+        peak = token.get('current_stat', 0)  # plus haut multiple entier deja atteint
 
         update = {}
+        milestone = None
 
         if current is not None and initial:
             ratio = current / initial
-            x_rounded = int(ratio // 2) * 2
+            m = int(ratio)  # multiple entier courant (floor)
 
-            if x_rounded > token.get('current_stat', 0):
-                update['current_stat'] = x_rounded
+            # Nouveau record de multiple (>= x2) -> on enregistre + on annonce.
+            if m >= 2 and m > peak:
+                update['current_stat'] = m
+                peak = m
+                milestone = m
 
-            if ratio >= WIN_RATIO:
-                update['wins'] = 1
-            elif ratio <= DEFEAT_RATIO:
-                update['defeat'] = 1
+            # Mort : -80% du prix INITIAL (du premier call). Suivi arrete, sans message.
+            if ratio <= DEFEAT_RATIO:
+                update['wins' if peak >= 2 else 'defeat'] = 1
 
-        # Timeout: token qui stagne depuis trop longtemps -> defeat.
+        # Timeout (filet de securite) : meme classification par le pic, sans message.
         if 'wins' not in update and 'defeat' not in update:
             created = token.get('creation_time')
             if isinstance(created, str):
                 try:
                     created_dt = datetime.strptime(created, '%d.%m.%Y %H:%M')
                     if now - created_dt > timedelta(hours=MAX_TRACK_HOURS):
-                        update['defeat'] = 1
+                        update['wins' if peak >= 2 else 'defeat'] = 1
                 except ValueError:
                     pass
 
         if update:
             users_collection.update_one({'_id': token['_id']}, {'$set': update})
 
-            if 'wins' in update or 'defeat' in update:
-                verdict = 'win' if 'wins' in update else 'defeat'
-                events.append({
-                    'group_id': token.get('group_id'),
-                    'coin_name': token.get('coin_name'),
-                    'contract_address': addr,
-                    'verdict': verdict,
-                    'stat': update.get('current_stat', token.get('current_stat', 0)),
-                })
-                print(f"{'WIN ' if verdict == 'win' else 'LOSS'} {addr} ({token.get('coin_name')})")
+        if milestone is not None:
+            events.append({
+                'group_id': token.get('group_id'),
+                'coin_name': token.get('coin_name'),
+                'contract_address': addr,
+                'multiple': milestone,
+            })
+            print(f"x{milestone} {addr} ({token.get('coin_name')})")
 
     return events
 
@@ -129,6 +132,7 @@ def get_top_groups_by_wins():
                 'total_current_stat': {'$sum': '$current_stat'}
             }
         },
+        {'$addFields': {'score': {'$subtract': ['$total_current_stat', '$total_defeat']}}},
         {
             '$sort': dict(RANK_SORT)
         },
@@ -154,6 +158,7 @@ def _ranked_groups():
                 'total_defeat': {'$sum': '$defeat'},
             }
         },
+        {'$addFields': {'score': {'$subtract': ['$total_current_stat', '$total_defeat']}}},
         {'$sort': dict(RANK_SORT)},
     ]))
 
