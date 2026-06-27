@@ -370,15 +370,12 @@ async def cmd_poke(message: Message, state: FSMContext):
 @user_handlers.message(F.text.startswith('/help'))
 async def cmd_reset(message: Message, state: FSMContext):
     message_text = (
-        "📖 WELCOME TO THE ENATI HELP SECTION\n\n"
+        "📖 WELCOME TO THE Versus HELP SECTION\n\n"
         "📊 Leaderboard & Stats:\n\n"
         "/wins – Displays the group's total wins (number of tokens that reached 2x of their call). 🏆\n\n"
         "/rank – Shows the group's current ranking on the leaderboard. 📈\n\n"
         "/defeats – Lists the number of tokens that dropped to -80% of their call. 💀\n\n"
         "/poke <group> <message> – Send a message to a group ranked below yours. 📣\n\n"
-        "💬 Community & Support:\n\n"
-        "Support Group: [Join here 💡](https://t.me/enatisupport)\n\n"
-        "Enati Community: [Join here 🚀](https://t.me/enaticommunity)\n\n"
         "⚔️ Compete, track stats, and climb the leaderboard with your group!"
     )
     
