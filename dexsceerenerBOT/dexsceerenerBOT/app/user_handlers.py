@@ -238,7 +238,7 @@ async def handle_contract_address(message: Message, state: FSMContext):
             "❌ This token isn't available on DexScreener yet, so it can't be tracked."
         )
 
-@user_handlers.message(F.text.startswith('/wins'))
+@user_handlers.message(F.text.startswith('/wins'), F.chat.type.in_({'group', 'supergroup'}))
 async def cmd_wins(message: Message, state: FSMContext):
     group_id = message.chat.id
     
@@ -246,14 +246,14 @@ async def cmd_wins(message: Message, state: FSMContext):
     await message.answer(f"🏆 *Wins for Group:* {wins}", parse_mode='Markdown')
     
 
-@user_handlers.message(F.text.startswith('/defeats'))
+@user_handlers.message(F.text.startswith('/defeats'), F.chat.type.in_({'group', 'supergroup'}))
 async def cmd_defeats(message: Message, state: FSMContext):
     group_id = message.chat.id
     
     defeats = md.get_group_defeats(group_id)
     await message.answer(f"💀 *Defeats for Group:* {defeats}", parse_mode='Markdown')
     
-@user_handlers.message(F.text.startswith('/rank'))
+@user_handlers.message(F.text.startswith('/rank'), F.chat.type.in_({'group', 'supergroup'}))
 async def cmd_rank(message: Message, state: FSMContext):
     group_id = message.chat.id
     
@@ -299,13 +299,9 @@ POKE_COOLDOWN = 30  # secondes entre deux pokes pour un meme groupe (anti-spam)
 _poke_last = {}     # group_id -> timestamp du dernier poke envoye
 
 
-@user_handlers.message(Command('poke'))
+@user_handlers.message(Command('poke'), F.chat.type.in_({'group', 'supergroup'}))
 async def cmd_poke(message: Message, state: FSMContext):
-    # Doit etre utilise dans un groupe.
-    if message.chat.type not in ('group', 'supergroup'):
-        await message.answer("Use /poke inside a group.")
-        return
-
+    # Restreint aux groupes (silencieux en prive via le filtre ci-dessus).
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2 or not parts[1].strip():
         await message.answer("Usage: /poke <group name> <message>")
