@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
 
-from flask import Flask, jsonify, request
+import time
+
+from flask import Flask, jsonify, request, Response, abort
 from pymongo import MongoClient
 from datetime import datetime, timedelta
 import logging
@@ -36,6 +38,57 @@ MONGO_DB_URL = os.environ['MONGO_DB_URL']
 client = MongoClient(MONGO_DB_URL)
 db = client['enati']
 users_collection = db['coins']
+
+# Token du bot (cote serveur uniquement) pour proxifier les photos de groupe sans l'exposer.
+BOT_TOKEN = os.environ.get('BOT_TOKEN')
+_group_photo_cache = {}          # group_id -> (bytes, content_type, timestamp)
+GROUP_PHOTO_TTL = 3600           # 1h
+
+
+@app.route('/api/group-photo/<group_id>', methods=['GET'])
+def group_photo(group_id):
+    """
+    Renvoie la photo d'un groupe en la recuperant cote serveur via l'API Telegram.
+    Le token du bot reste cote serveur -> jamais expose au navigateur.
+    """
+    try:
+        gid = int(group_id)
+    except (TypeError, ValueError):
+        abort(404)
+
+    cached = _group_photo_cache.get(gid)
+    if cached and (time.time() - cached[2] < GROUP_PHOTO_TTL):
+        return Response(cached[0], mimetype=cached[1])
+
+    if not BOT_TOKEN:
+        abort(404)
+
+    try:
+        chat = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/getChat',
+                            params={'chat_id': gid}, timeout=10).json()
+        photo = (chat.get('result') or {}).get('photo') or {}
+        file_id = photo.get('big_file_id')
+        if not file_id:
+            abort(404)
+
+        finfo = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/getFile',
+                             params={'file_id': file_id}, timeout=10).json()
+        file_path = (finfo.get('result') or {}).get('file_path')
+        if not file_path:
+            abort(404)
+
+        img = requests.get(f'https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}', timeout=15)
+        if img.status_code != 200:
+            abort(404)
+
+        content_type = img.headers.get('Content-Type', 'image/jpeg')
+        if not content_type.startswith('image/'):
+            content_type = 'image/jpeg'  # Telegram renvoie parfois octet-stream
+        _group_photo_cache[gid] = (img.content, content_type, time.time())
+        return Response(img.content, mimetype=content_type)
+    except requests.RequestException as e:
+        logger.warning(f"group photo proxy failed for {gid}: {e}")
+        abort(404)
 
 def get_top_groups_by_wins():
     # Use an aggregation pipeline to group by group_id, sum the fields, and sort by wins
@@ -286,6 +339,8 @@ def get_all_groups_stats():
                 'total_wins': group['total_wins'],
                 'total_defeats': group['total_defeats'],
                 'max_current_stat': group['max_current_stat'],
+                'total_current_stat': group.get('total_current_stat', 0),
+                'score': group.get('score', 0),
                 'total_members': group['total_members'],
                 'win_rate': round(group['win_rate'], 2)  # Округляем до 2 знаков после запятой
             }
