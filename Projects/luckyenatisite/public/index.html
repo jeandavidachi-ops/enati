@@ -9,7 +9,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body{margin:0;background:#000}
+  body{margin:0;background:#0b0b0c}
+  html{scrollbar-color:#27272a #0b0b0c;scrollbar-width:thin}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:#0b0b0c}
+  ::-webkit-scrollbar-thumb{background:#27272a;border-radius:6px}
+  ::-webkit-scrollbar-thumb:hover{background:#3f3f46}
   .no-scrollbar::-webkit-scrollbar{display:none}
   .no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
 </style>
@@ -100,6 +105,50 @@ function Socials() {
   );
 }
 
+// ---- Leaderboard (podium + tableau), repris de la page leaderboards ----
+const BG = "#0b0b0c";
+function Podium({ d, rank }) {
+  const C = {
+    1: { border: "rgba(245,158,11,0.6)", bottom: "rgb(44, 38, 11)", num: "text-amber-400", numStyle: {} },
+    2: { border: "rgba(212,212,216,0.45)", bottom: "rgb(25, 25, 25)", num: "text-zinc-300", numStyle: {} },
+    3: { border: "rgba(249,115,22,0.6)", bottom: "rgb(29, 24, 14)", num: "", numStyle: { color: "rgb(179, 139, 105)" } },
+  }[rank];
+  const lift = rank === 1 ? "mt-1" : "mt-0";
+  const avatarSize = rank === 1 ? "w-28 h-28" : "w-24 h-24";
+  const nameSize = rank === 1 ? "text-lg" : "text-base";
+  const wrap = {
+    transform: "rotateX(-4deg)",
+    transformOrigin: "center bottom",
+    background: `linear-gradient(to bottom, transparent 22%, ${C.border} 100%)`,
+    borderRadius: 26,
+    padding: 1,
+  };
+  const fill = {
+    background: `linear-gradient(to bottom, ${BG} 0%, ${BG} 50%, ${C.bottom} 100%)`,
+    borderRadius: 25,
+  };
+  return (
+    <div className={"flex-1 " + lift} style={{ transformStyle: "preserve-3d" }}>
+      <div style={wrap}>
+        <div style={fill} className="px-8 py-3 flex flex-col items-center">
+          <div className={"text-2xl font-bold mb-4 " + C.num} style={C.numStyle}>{rank}</div>
+          <Avatar src={d ? d.img : null} g={d ? d.g : gradOf(rank)} e={d ? d.e : emojiOf(rank)}
+            className={avatarSize + " rounded-2xl text-4xl"} />
+          <div className={"mt-4 font-mono font-semibold text-white text-center truncate w-full " + nameSize}>
+            {d ? d.name : "—"}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function Th({ children, className = "" }) {
+  return <th className={"text-left text-[11px] font-mono font-normal text-zinc-500 uppercase tracking-wider py-3 " + className}>{children}</th>;
+}
+function Td({ children, className = "" }) {
+  return <td className={"py-4 font-mono text-sm " + className}>{children}</td>;
+}
+
 function GroupCard({ d }) {
   return (
     <div className="rounded-2xl bg-zinc-900/40 ring-1 ring-white/5 p-3 hover:ring-white/15 transition">
@@ -146,11 +195,13 @@ function Versus() {
   const [tickerTime, setTickerTime] = useState("12h");
   const [groups, setGroups] = useState([]);
   const [tickers, setTickers] = useState([]);
+  const [lbRows, setLbRows] = useState([]);
 
-  // Charge les groupes (Popular Groups + strip du haut)
+  // Charge les groupes (Leaderboard + Popular Groups + strip du haut)
   useEffect(() => {
     fetch("/api/all-groups-stats").then(r => r.json()).then(res => {
-      const data = (res.data || []).slice(0, 8).map((g, i) => ({
+      const all = res.data || [];
+      setGroups(all.slice(0, 8).map((g, i) => ({
         id: g.group_id,
         name: g.group_name || "Unknown",
         score: g.total_current_stat || 0,
@@ -158,8 +209,21 @@ function Versus() {
         calls: g.total_members || 0,
         img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
         g: gradOf(i), e: emojiOf(i),
+      })));
+      setLbRows(all.map((g, i) => {
+        const calls = g.total_members || 0;
+        const avg = calls > 0 ? (g.total_current_stat || 0) / calls : 0;
+        return {
+          id: g.group_id,
+          name: g.group_name || "Unknown",
+          win: Math.round(g.win_rate || 0),
+          avg: avg.toFixed(1),
+          high: g.max_current_stat || 0,
+          calls: calls,
+          img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
+          g: gradOf(i), e: emojiOf(i),
+        };
       }));
-      setGroups(data);
     }).catch(() => {});
   }, []);
 
@@ -188,13 +252,13 @@ function Versus() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black p-4 sm:p-8 font-mono text-white">
-      <div className="mx-auto max-w-7xl rounded-[28px] bg-[#0b0b0c] ring-1 ring-white/5 overflow-hidden">
+    <div className="min-h-screen bg-[#0b0b0c] font-mono text-white">
+      <div className="bg-[#0b0b0c]">
         <header className="flex items-center gap-6 px-6 py-5">
           <span className="text-2xl font-black tracking-[0.15em] italic select-none">VERSUS</span>
           <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-300">
-            <a className="hover:text-white" href="#">Tickers</a>
-            <a className="hover:text-white" href="#">Groups</a>
+            <a className="hover:text-white" href="#tickers">Tickers</a>
+            <a className="hover:text-white" href="#groups">Groups</a>
             <span className="flex items-center gap-2">
               <span className="text-zinc-300">Duels</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded border border-lime-400/60 text-lime-400 font-semibold">SOON</span>
@@ -226,7 +290,56 @@ function Versus() {
         </div>
 
         <main className="px-6 py-8">
-          <section>
+          {/* Leaderboard (podium + tableau) */}
+          <section className="mb-16">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <h2 className="text-3xl font-bold">Leaderboard</h2>
+              <TimeTabs value={groupTime} onChange={setGroupTime} />
+            </div>
+            <div className="flex items-start gap-4 mt-8 max-w-4xl mx-auto" style={{ perspective: "1200px" }}>
+              <Podium d={lbRows[1]} rank={2} />
+              <Podium d={lbRows[0]} rank={1} />
+              <Podium d={lbRows[2]} rank={3} />
+            </div>
+            <div className="mt-12 overflow-x-auto no-scrollbar">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <Th className="pl-2">Position ↓</Th>
+                    <Th>Group</Th>
+                    <Th>Win Rate</Th>
+                    <Th>Avg. Multiplier</Th>
+                    <Th>Highest Multiplier</Th>
+                    <Th>Total Calls</Th>
+                    <Th>Socials</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lbRows.map((d, i) => (
+                    <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
+                      <Td className="pl-2 text-zinc-400">{i + 1}</Td>
+                      <Td>
+                        <div className="flex items-center gap-3">
+                          <Avatar src={d.img} g={d.g} e={d.e} className="w-7 h-7 rounded-md text-sm" />
+                          <span className="text-white">{d.name}</span>
+                        </div>
+                      </Td>
+                      <Td className="text-emerald-400">{d.win}%</Td>
+                      <Td className="text-white">{d.avg}x</Td>
+                      <Td className="text-white">{d.high}x</Td>
+                      <Td className="text-white">{d.calls}</Td>
+                      <Td><Socials /></Td>
+                    </tr>
+                  ))}
+                  {lbRows.length === 0 && (
+                    <tr><td colSpan="7" className="py-8 text-center text-zinc-600 text-sm">No groups yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="groups">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-2xl font-semibold">Popular Groups</h2>
@@ -240,7 +353,7 @@ function Versus() {
             {groups.length === 0 && <p className="text-sm text-zinc-600 mt-5">No groups yet.</p>}
           </section>
 
-          <section className="mt-12">
+          <section id="tickers" className="mt-12">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-2xl font-semibold">Popular Tickers</h2>
@@ -255,16 +368,15 @@ function Versus() {
           </section>
         </main>
 
-        <div className="px-4 select-none">
-          <div className="text-center font-black tracking-tight leading-none text-white" style={{ fontSize: "clamp(4rem, 22vw, 20rem)" }}>VERSUS</div>
-        </div>
-
         <footer className="px-6 py-8 flex flex-col md:flex-row gap-4 md:items-end md:justify-between text-xs text-zinc-500">
-          <p className="max-w-2xl leading-relaxed">
+          <div>
+            <div className="text-white font-black text-xl tracking-[0.15em] italic mb-3">Versus</div>
+            <p className="max-w-2xl leading-relaxed">
             All token references, logos, and project names displayed on Versus are for informational purposes only and
             remain the property of their respective owners. Versus is not affiliated with or endorsed by any of the
             projects featured on the platform.
-          </p>
+            </p>
+          </div>
           <p className="shrink-0">© 2026 Versus. All rights reserved.</p>
         </footer>
       </div>

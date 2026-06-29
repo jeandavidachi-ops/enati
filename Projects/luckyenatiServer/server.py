@@ -28,11 +28,6 @@ def home():
     return app.send_static_file('index.html')
 
 
-@app.route('/leaderboards')
-def leaderboards_page():
-    return app.send_static_file('leaderboards.html')
-
-
 # MongoDB connection setup
 MONGO_DB_URL = os.environ['MONGO_DB_URL']
 client = MongoClient(MONGO_DB_URL)
@@ -60,32 +55,43 @@ def group_photo(group_id):
     if cached and (time.time() - cached[2] < GROUP_PHOTO_TTL):
         return Response(cached[0], mimetype=cached[1])
 
+    def _serve(content, content_type):
+        if not content_type or not content_type.startswith('image/'):
+            content_type = 'image/jpeg'  # Telegram renvoie parfois octet-stream
+        _group_photo_cache[gid] = (content, content_type, time.time())
+        return Response(content, mimetype=content_type)
+
+    # 1) URL stockee dans la base (marche meme si le bot a quitte le groupe).
+    #    On la fetch cote serveur -> le token present dans l'URL n'est jamais expose au navigateur.
+    doc = users_collection.find_one({'group_id': gid}, {'group_photo': 1})
+    stored = (doc or {}).get('group_photo')
+    if stored and isinstance(stored, str) and stored.startswith('http'):
+        try:
+            img = requests.get(stored, timeout=15)
+            if img.status_code == 200 and img.content:
+                return _serve(img.content, img.headers.get('Content-Type', 'image/jpeg'))
+        except requests.RequestException:
+            pass  # on tente le fallback ci-dessous
+
+    # 2) Fallback : re-fetch via l'API Telegram (URL stockee absente/expiree).
+    #    Necessite BOT_TOKEN et que le bot soit encore dans le groupe.
     if not BOT_TOKEN:
         abort(404)
-
     try:
         chat = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/getChat',
                             params={'chat_id': gid}, timeout=10).json()
-        photo = (chat.get('result') or {}).get('photo') or {}
-        file_id = photo.get('big_file_id')
+        file_id = ((chat.get('result') or {}).get('photo') or {}).get('big_file_id')
         if not file_id:
             abort(404)
-
         finfo = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/getFile',
                              params={'file_id': file_id}, timeout=10).json()
         file_path = (finfo.get('result') or {}).get('file_path')
         if not file_path:
             abort(404)
-
         img = requests.get(f'https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}', timeout=15)
         if img.status_code != 200:
             abort(404)
-
-        content_type = img.headers.get('Content-Type', 'image/jpeg')
-        if not content_type.startswith('image/'):
-            content_type = 'image/jpeg'  # Telegram renvoie parfois octet-stream
-        _group_photo_cache[gid] = (img.content, content_type, time.time())
-        return Response(img.content, mimetype=content_type)
+        return _serve(img.content, img.headers.get('Content-Type', 'image/jpeg'))
     except requests.RequestException as e:
         logger.warning(f"group photo proxy failed for {gid}: {e}")
         abort(404)
