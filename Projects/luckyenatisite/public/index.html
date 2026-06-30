@@ -352,7 +352,7 @@ function Versus() {
               </div>
               <TimeTabs value={groupTime} onChange={setGroupTime} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 mt-5">
               {groups.map((d, i) => (
                 <BlocksCard key={i} image={d.img} name={d.name} g={d.g} e={d.e}
                   stats={[
@@ -373,7 +373,7 @@ function Versus() {
               </div>
               <TimeTabs value={tickerTime} onChange={setTickerTime} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 mt-5">
               {tickers.map((d, i) => (
                 <BlocksCard key={i} image={d.img} name={d.sym} g={d.g} e={d.e}
                   stats={[
