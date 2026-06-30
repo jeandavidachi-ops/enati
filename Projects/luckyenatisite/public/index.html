@@ -157,7 +157,7 @@ function Td({ children, className = "" }) {
 function BlocksThumb({ src, g, e }) {
   const [err, setErr] = useState(false);
   return (
-    <div className="relative w-24 h-24 flex-none overflow-hidden rounded-[14px] bg-[#0d0d0d]"
+    <div className="relative w-28 h-28 flex-none overflow-hidden rounded-[14px] bg-[#0d0d0d]"
       style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.04), inset 0 12px 30px rgba(0,0,0,0.34), inset 0 -8px 20px rgba(0,0,0,0.30), 0 4px 14px rgba(0,0,0,0.28)" }}>
       {src && !err
         ? <img src={src} onError={() => setErr(true)} className="absolute inset-0 w-full h-full object-cover" />
@@ -170,7 +170,7 @@ function BlocksThumb({ src, g, e }) {
 function BlocksCard({ image, name, stats, g, e }) {
   const noise = "url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%222%22 stitchTiles=%22stitch%22/></filter><rect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/></svg>')";
   return (
-    <article className="font-geist relative w-full rounded-[18px] p-3"
+    <article className="font-geist relative w-full rounded-[18px] p-4"
       style={{ background: "linear-gradient(178deg, #1c1b1a 0%, #131312 50%, #0b0b0c 100%)", border: "1px solid rgba(255,255,255,0.021)", boxShadow: "0 1px 0 0 rgba(255,255,255,0.06) inset, 0 -1px 0 0 rgba(0,0,0,0.7) inset, 0 2px 4px rgba(0,0,0,0.5), 0 10px 24px rgba(0,0,0,0.5), 0 36px 60px -24px rgba(0,0,0,0.8)" }}>
       <div aria-hidden className="pointer-events-none absolute inset-0 rounded-[18px]" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 26%, rgba(0,0,0,0) 68%, rgba(0,0,0,0.42) 100%)" }} />
       <div aria-hidden className="pointer-events-none absolute inset-0 rounded-[18px]" style={{ background: "radial-gradient(70% 80% at 20% 2%, rgba(255,248,235,0.07) 0%, rgba(255,248,235,0) 52%)" }} />
@@ -179,7 +179,7 @@ function BlocksCard({ image, name, stats, g, e }) {
       <div className="relative flex gap-3">
         <BlocksThumb src={image} g={g} e={e} />
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold tracking-[-0.01em] text-[#fbfbfc] truncate">{name}</h2>
+          <h2 className="text-lg font-semibold tracking-[-0.01em] text-[#fbfbfc] truncate">{name}</h2>
           <dl className="grid grid-cols-3 gap-2 mt-3">
             {stats.map((s, i) => (
               <div key={i} className="flex flex-col gap-0.5 min-w-0">
@@ -305,8 +305,8 @@ function Versus() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0b0b0c] font-mono text-white">
-      <div className="bg-[#0b0b0c]">
+    <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
+      <div className="flex flex-col flex-1 bg-[#0b0b0c]">
         <header className="flex items-center gap-6 px-6 py-5">
           <span className="text-2xl font-black tracking-[0.15em] italic select-none">VERSUS</span>
           <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-300">
@@ -343,7 +343,7 @@ function Versus() {
           </div>
         </div>
 
-        <main className="px-6 py-8">
+        <main className="flex-1 px-6 py-8">
           <section id="groups">
             <div className="flex items-start justify-between">
               <div>
@@ -352,7 +352,7 @@ function Versus() {
               </div>
               <TimeTabs value={groupTime} onChange={setGroupTime} />
             </div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 mt-5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5 mt-5">
               {groups.map((d, i) => (
                 <BlocksCard key={i} image={d.img} name={d.name} g={d.g} e={d.e}
                   stats={[
@@ -373,7 +373,7 @@ function Versus() {
               </div>
               <TimeTabs value={tickerTime} onChange={setTickerTime} />
             </div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 mt-5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5 mt-5">
               {tickers.map((d, i) => (
                 <BlocksCard key={i} image={d.img} name={d.sym} g={d.g} e={d.e}
                   stats={[
