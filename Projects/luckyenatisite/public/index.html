@@ -92,16 +92,9 @@ function Avatar({ src, g, e, className }) {
     </div>
   );
 }
-// Logo VS de secours (repris de "VS Split Seam (live).html") pour les cards sans image
+// Logo Versus de secours pour les cards sans image
 function VsLogo({ className = "" }) {
-  return (
-    <svg viewBox="0 0 1200 800" className={className} xmlns="http://www.w3.org/2000/svg">
-      <rect width="1200" height="800" fill="#0d0d0d" />
-      <rect x="420" y="160" width="360" height="480" rx="90" fill="#222427" />
-      <text x="600" y="510" fontFamily="Arial Black, sans-serif" fontWeight="900"
-        fontStyle="italic" fontSize="300" fill="#f6f7f9" textAnchor="middle">VS</text>
-    </svg>
-  );
+  return <img src="/images/versus.png" alt="Versus" className={"object-cover " + className} />;
 }
 function Stat({ label, value, valueClass = "text-white" }) {
   return (
