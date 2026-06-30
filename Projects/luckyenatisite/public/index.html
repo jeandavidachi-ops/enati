@@ -87,9 +87,20 @@ function Avatar({ src, g, e, className }) {
       className={"shrink-0 object-cover bg-zinc-800 " + className} />;
   }
   return (
-    <div className={"shrink-0 bg-gradient-to-br " + g + " flex items-center justify-center overflow-hidden " + className}>
-      <span className="opacity-90 drop-shadow">{e}</span>
+    <div className={"shrink-0 flex items-center justify-center overflow-hidden bg-[#0d0d0d] " + className}>
+      <VsLogo className="w-full h-full" />
     </div>
+  );
+}
+// Logo VS de secours (repris de "VS Split Seam (live).html") pour les cards sans image
+function VsLogo({ className = "" }) {
+  return (
+    <svg viewBox="0 0 1200 800" className={className} xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#0d0d0d" />
+      <rect x="420" y="160" width="360" height="480" rx="90" fill="#222427" />
+      <text x="600" y="510" fontFamily="Arial Black, sans-serif" fontWeight="900"
+        fontStyle="italic" fontSize="300" fill="#f6f7f9" textAnchor="middle">VS</text>
+    </svg>
   );
 }
 function Stat({ label, value, valueClass = "text-white" }) {
@@ -161,7 +172,7 @@ function BlocksThumb({ src, g, e }) {
       style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.04), inset 0 12px 30px rgba(0,0,0,0.34), inset 0 -8px 20px rgba(0,0,0,0.30), 0 4px 14px rgba(0,0,0,0.28)" }}>
       {src && !err
         ? <img src={src} onError={() => setErr(true)} className="absolute inset-0 w-full h-full object-cover" />
-        : <div className={"absolute inset-0 flex items-center justify-center text-2xl bg-gradient-to-br " + (g || "from-zinc-700 to-zinc-900")}>{e || "⚔️"}</div>}
+        : <VsLogo className="absolute inset-0 w-full h-full" />}
       <div className="pointer-events-none absolute inset-0 rounded-[14px]"
         style={{ boxShadow: "inset 0 2px 8px rgba(0,0,0,0.4), inset 0 -2px 10px rgba(0,0,0,0.4)", background: "radial-gradient(70% 60% at 30% 18%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 60%)" }} />
     </div>
@@ -191,12 +202,12 @@ function BlocksCard({ image, name, stats, g, e }) {
               </div>
             ))}
           </dl>
+          <nav className="mt-3 flex items-center gap-3 text-[#6e6e6e]">
+            <XIcon className="w-3.5 h-3.5 hover:text-[#bdbdbd] cursor-pointer" />
+            <TelegramIcon className="w-4 h-4 hover:text-[#bdbdbd] cursor-pointer" />
+          </nav>
         </div>
       </div>
-      <nav className="relative mt-3 flex items-center gap-3 text-[#6e6e6e]">
-        <XIcon className="w-3.5 h-3.5 hover:text-[#bdbdbd] cursor-pointer" />
-        <TelegramIcon className="w-4 h-4 hover:text-[#bdbdbd] cursor-pointer" />
-      </nav>
     </article>
   );
 }
@@ -248,6 +259,18 @@ function Versus() {
   const [groups, setGroups] = useState([]);
   const [tickers, setTickers] = useState([]);
   const [lbRows, setLbRows] = useState([]);
+  const [sharedMap, setSharedMap] = useState({});
+
+  // Charge le nombre de groupes par token (contract_address -> groups_count)
+  useEffect(() => {
+    fetch("/api/shared-contracts").then(r => r.json()).then(res => {
+      const map = {};
+      (res.data || []).forEach(c => {
+        if (c.contract_address) map[String(c.contract_address).toLowerCase()] = c.groups_count;
+      });
+      setSharedMap(map);
+    }).catch(() => {});
+  }, []);
 
   // Charge les groupes (Leaderboard + Popular Groups + strip du haut)
   useEffect(() => {
@@ -379,7 +402,7 @@ function Versus() {
                   stats={[
                     { label: "Best", value: d.mult + "x", positive: true },
                     { label: "MC", value: d.mc },
-                    { label: "Group", value: d.group },
+                    { label: "Groups", value: (d.addr && sharedMap[String(d.addr).toLowerCase()]) || 1 },
                   ]} />
               ))}
             </div>
