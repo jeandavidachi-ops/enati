@@ -28,6 +28,12 @@ def home():
     return app.send_static_file('index.html')
 
 
+@app.route('/leaderboards')
+@app.route('/leaderboard')
+def leaderboards_page():
+    return app.send_static_file('leaderboards.html')
+
+
 # MongoDB connection setup
 MONGO_DB_URL = os.environ['MONGO_DB_URL']
 client = MongoClient(MONGO_DB_URL)

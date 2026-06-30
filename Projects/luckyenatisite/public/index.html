@@ -259,6 +259,7 @@ function Versus() {
           <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-300">
             <a className="hover:text-white" href="#tickers">Tickers</a>
             <a className="hover:text-white" href="#groups">Groups</a>
+            <a className="hover:text-white" href="/leaderboard">Leaderboard</a>
             <span className="flex items-center gap-2">
               <span className="text-zinc-300">Duels</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded border border-lime-400/60 text-lime-400 font-semibold">SOON</span>
@@ -290,55 +291,6 @@ function Versus() {
         </div>
 
         <main className="px-6 py-8">
-          {/* Leaderboard (podium + tableau) */}
-          <section className="mb-16">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <h2 className="text-3xl font-bold">Leaderboard</h2>
-              <TimeTabs value={groupTime} onChange={setGroupTime} />
-            </div>
-            <div className="flex items-start gap-4 mt-8 max-w-4xl mx-auto" style={{ perspective: "1200px" }}>
-              <Podium d={lbRows[1]} rank={2} />
-              <Podium d={lbRows[0]} rank={1} />
-              <Podium d={lbRows[2]} rank={3} />
-            </div>
-            <div className="mt-12 overflow-x-auto no-scrollbar">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b border-white/5">
-                    <Th className="pl-2">Position ↓</Th>
-                    <Th>Group</Th>
-                    <Th>Win Rate</Th>
-                    <Th>Avg. Multiplier</Th>
-                    <Th>Highest Multiplier</Th>
-                    <Th>Total Calls</Th>
-                    <Th>Socials</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lbRows.map((d, i) => (
-                    <tr key={i} className="border-b border-white/5 hover:bg-white/[0.02]">
-                      <Td className="pl-2 text-zinc-400">{i + 1}</Td>
-                      <Td>
-                        <div className="flex items-center gap-3">
-                          <Avatar src={d.img} g={d.g} e={d.e} className="w-7 h-7 rounded-md text-sm" />
-                          <span className="text-white">{d.name}</span>
-                        </div>
-                      </Td>
-                      <Td className="text-emerald-400">{d.win}%</Td>
-                      <Td className="text-white">{d.avg}x</Td>
-                      <Td className="text-white">{d.high}x</Td>
-                      <Td className="text-white">{d.calls}</Td>
-                      <Td><Socials /></Td>
-                    </tr>
-                  ))}
-                  {lbRows.length === 0 && (
-                    <tr><td colSpan="7" className="py-8 text-center text-zinc-600 text-sm">No groups yet.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
           <section id="groups">
             <div className="flex items-start justify-between">
               <div>
