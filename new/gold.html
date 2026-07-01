@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VS · #1 Gold Podium Card (Ember)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; min-height: 100%; background: #060607; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    padding: 80px 24px;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* ---- Podium card (rank #1, Ember treatment) ---- */
+  .vs-podium { position: relative; width: 560px; }
+
+  .vs-podium__badge-glow {
+    position: absolute; left: 50%; top: -40px;
+    width: 230px; height: 160px; transform: translateX(-50%);
+    background: radial-gradient(50% 55% at 50% 50%, rgba(245,196,75,0.32) 0%, transparent 70%);
+    pointer-events: none; z-index: 1;
+  }
+
+  .vs-podium__badge {
+    position: absolute; top: -50px; left: 50%; transform: translateX(-50%);
+    width: 116px; height: 116px; z-index: 6;
+  }
+  .vs-podium__badge-shape {
+    position: absolute; inset: 0;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    border-radius: 8px;
+    background: linear-gradient(165deg, #FFEBAC 0%, #F7C858 38%, #E2A93C 60%, #B57512 100%);
+    box-shadow: 0 16px 30px -6px rgba(0,0,0,0.6), 0 0 0 1px rgba(120,72,12,0.55),
+                inset 0 2px 1px rgba(255,255,255,0.75), inset 0 -11px 18px rgba(120,66,8,0.55);
+  }
+  .vs-podium__badge-gloss {
+    position: absolute; inset: 0;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: radial-gradient(64% 46% at 50% 10%, rgba(255,255,255,0.6) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .vs-podium__crown {
+    position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 2;
+  }
+  .vs-podium__rank {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    padding-top: 18px; font-family: 'Geist', sans-serif; font-weight: 800; font-size: 48px;
+    color: #2a1c06; z-index: 2;
+  }
+
+  .vs-podium__card {
+    position: relative; margin-top: 56px; border-radius: 30px; overflow: hidden;
+    padding: 52px 44px 42px;
+    background: radial-gradient(125% 105% at 50% 30%, #443a22 0%, #2a2415 52%, #14110a 100%);
+    border: 1px solid rgba(245,196,75,0.3);
+    box-shadow: 0 50px 110px -38px rgba(0,0,0,0.95), 0 0 62px -12px rgba(245,196,75,0.22),
+                inset 0 1px 0 rgba(255,240,210,0.06);
+  }
+  .vs-podium__ov { position: absolute; pointer-events: none; border-radius: inherit; inset: 0; }
+  .vs-podium__ov--sheen  { background: linear-gradient(180deg, rgba(255,244,214,0.12) 0%, transparent 26%); }
+  .vs-podium__ov--leak   { background: radial-gradient(90% 60% at 50% 118%, rgba(245,196,75,0.26) 0%, transparent 64%); }
+  .vs-podium__ov--embers {
+    background-image:
+      radial-gradient(circle at 30% 88%, rgba(255,170,60,0.5) 0.5px, transparent 2px),
+      radial-gradient(circle at 55% 94%, rgba(255,190,80,0.4) 0.5px, transparent 2px),
+      radial-gradient(circle at 72% 86%, rgba(255,160,50,0.45) 0.5px, transparent 2px),
+      radial-gradient(circle at 45% 80%, rgba(255,200,90,0.35) 0.5px, transparent 1.5px);
+  }
+  .vs-podium__ov--noise {
+    opacity: 0.5; mix-blend-mode: overlay;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23n)"/></svg>');
+  }
+  .vs-podium__ov--vignette { background: radial-gradient(140% 130% at 50% 40%, transparent 62%, rgba(0,0,0,0.42) 100%); }
+
+  .vs-podium__content {
+    position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center;
+  }
+  .vs-podium__avatar {
+    width: 122px; height: 122px; border-radius: 28px; position: relative; overflow: hidden;
+    background: radial-gradient(120% 120% at 50% 20%, #FFF0C4 0%, #E6B84F 44%, #8a5d16 100%);
+    box-shadow: 0 0 0 1px rgba(245,196,75,0.5), 0 16px 36px rgba(0,0,0,0.55),
+                inset 0 2px 8px rgba(255,255,255,0.28), inset 0 -16px 28px rgba(0,0,0,0.42);
+  }
+  .vs-podium__avatar::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(60% 42% at 50% 16%, rgba(255,255,255,0.34), transparent 60%);
+  }
+  .vs-podium__name {
+    font-family: 'Geist', sans-serif; font-weight: 700; font-size: 30px; color: #f6f7f9;
+    margin-top: 20px; letter-spacing: -0.01em;
+  }
+</style>
+</head>
+<body>
+  <div class="vs-podium">
+    <!-- glow behind badge -->
+    <div class="vs-podium__badge-glow"></div>
+
+    <!-- rank badge (hexagon + crown + number) -->
+    <div class="vs-podium__badge">
+      <div class="vs-podium__badge-shape"></div>
+      <div class="vs-podium__badge-gloss"></div>
+      <svg class="vs-podium__crown" width="30" height="19" viewBox="0 0 24 15" fill="#7a5212"><path d="M2 3l4.2 3.6L12 1l5.8 5.6L22 3l-1.8 10.2H3.8L2 3z"></path></svg>
+      <div class="vs-podium__rank">1</div>
+    </div>
+
+    <!-- card -->
+    <div class="vs-podium__card">
+      <div class="vs-podium__ov vs-podium__ov--sheen"></div>
+      <div class="vs-podium__ov vs-podium__ov--leak"></div>
+      <div class="vs-podium__ov vs-podium__ov--embers"></div>
+      <div class="vs-podium__ov vs-podium__ov--noise"></div>
+      <div class="vs-podium__ov vs-podium__ov--vignette"></div>
+
+      <div class="vs-podium__content">
+        <div class="vs-podium__avatar"></div>
+        <div class="vs-podium__name">Ninjago</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

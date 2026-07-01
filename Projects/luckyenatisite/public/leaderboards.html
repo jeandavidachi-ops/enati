@@ -143,19 +143,9 @@ function Podium({ d, rank }) {
   const ov = { position: "absolute", inset: 0, pointerEvents: "none", borderRadius: "inherit" };
   return (
     <div className="flex-1 relative min-w-0" style={wrapStyle}>
-      {/* glow behind badge */}
-      <div style={{ position: "absolute", left: "50%", top: glowTop, width: "clamp(96px, 10vw, 150px)", height: "clamp(66px, 7vw, 100px)", transform: "translateX(-50%)", background: `radial-gradient(50% 55% at 50% 50%, ${c.glow} 0%, transparent 70%)`, pointerEvents: "none", zIndex: 1 }} />
-
       {/* rank badge */}
       <div style={{ position: "absolute", top: badgeTop, left: "50%", transform: "translateX(-50%)", width: badgeSize, height: badgeSize, zIndex: 6 }}>
-        <div style={{ position: "absolute", inset: 0, clipPath: HEX_CLIP, borderRadius: 6, background: c.badge, boxShadow: `0 10px 18px -4px rgba(0,0,0,0.6), 0 0 0 1px ${c.badgeRing}, inset 0 2px 1px rgba(255,255,255,0.75), inset 0 -7px 11px ${c.badgeInset}` }} />
-        <div style={{ position: "absolute", inset: 0, clipPath: HEX_CLIP, background: "radial-gradient(64% 46% at 50% 10%, rgba(255,255,255,0.6) 0%, transparent 60%)", pointerEvents: "none" }} />
-        {c.crown && (
-          <svg viewBox="0 0 24 15" fill={c.crown} style={{ position: "absolute", top: "clamp(5px, 0.7vw, 11px)", left: "50%", transform: "translateX(-50%)", width: "clamp(14px, 1.6vw, 26px)", zIndex: 2 }}>
-            <path d="M2 3l4.2 3.6L12 1l5.8 5.6L22 3l-1.8 10.2H3.8L2 3z" />
-          </svg>
-        )}
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", paddingTop: c.crown ? "clamp(6px, 0.9vw, 10px)" : 0, fontFamily: MONO, fontWeight: 800, fontSize: "clamp(20px, 2.4vw, 36px)", color: c.rankColor, zIndex: 2 }}>{rank}</div>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: MONO, fontWeight: 800, fontSize: "clamp(24px, 3vw, 44px)", backgroundImage: c.badge, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", zIndex: 2 }}>{rank}</div>
       </div>
 
       {/* card */}
