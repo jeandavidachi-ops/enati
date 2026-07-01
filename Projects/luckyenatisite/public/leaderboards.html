@@ -8,9 +8,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   body{margin:0;background:#0b0b0c}
   html{scrollbar-color:#27272a #0b0b0c;scrollbar-width:thin}
@@ -70,14 +67,8 @@ function TimeTabs() {
 
 function Avatar({ src, g, e, className }) {
   const [err, setErr] = useState(false);
-  if (src && !err) {
-    return <img src={src} onError={() => setErr(true)} className={"shrink-0 object-cover bg-zinc-800 " + className} />;
-  }
-  return (
-    <div className={"shrink-0 bg-gradient-to-br " + g + " flex items-center justify-center overflow-hidden " + className}>
-      <span className="opacity-90 drop-shadow">{e}</span>
-    </div>
-  );
+  const url = (src && !err) ? src : "/images/versus.png";
+  return <img src={url} onError={() => setErr(true)} className={"shrink-0 object-cover bg-zinc-800 " + className} />;
 }
 function Socials() {
   return (
@@ -134,9 +125,7 @@ function PodAvatar({ d, e, style }) {
   const src = d ? d.img : null;
   return (
     <div style={style} className="relative overflow-hidden flex items-center justify-center">
-      {src && !err
-        ? <img src={src} onError={() => setErr(true)} className="absolute inset-0 w-full h-full object-cover" />
-        : <span className="text-3xl opacity-90 drop-shadow relative">{d ? d.e : e}</span>}
+      <img src={(src && !err) ? src : "/images/versus.png"} onError={() => setErr(true)} className="absolute inset-0 w-full h-full object-cover" />
       <div className="absolute inset-0" style={{ background: "radial-gradient(60% 42% at 50% 16%, rgba(255,255,255,0.34), transparent 60%)" }} />
     </div>
   );
@@ -166,7 +155,7 @@ function Podium({ d, rank }) {
             <path d="M2 3l4.2 3.6L12 1l5.8 5.6L22 3l-1.8 10.2H3.8L2 3z" />
           </svg>
         )}
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", paddingTop: c.crown ? "clamp(6px, 0.9vw, 10px)" : 0, fontFamily: "'Geist', sans-serif", fontWeight: 800, fontSize: "clamp(20px, 2.2vw, 28px)", color: c.rankColor, zIndex: 2 }}>{rank}</div>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", paddingTop: c.crown ? "clamp(6px, 0.9vw, 10px)" : 0, fontFamily: MONO, fontWeight: 800, fontSize: "clamp(20px, 2.2vw, 28px)", color: c.rankColor, zIndex: 2 }}>{rank}</div>
       </div>
 
       {/* card */}
@@ -188,8 +177,9 @@ function Podium({ d, rank }) {
   );
 }
 const TABLE_COLS = "70px minmax(190px,2.1fr) 1fr 1.2fr 1.45fr 1.05fr 0.95fr 96px";
-const THS = { fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap", color: "#797d84" };
-const VAL = { fontFamily: "'Geist', 'Inter', sans-serif", fontWeight: 500, fontSize: 16, fontVariantNumeric: "tabular-nums" };
+const MONO = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+const THS = { fontFamily: MONO, fontSize: 12, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap", color: "#797d84" };
+const VAL = { fontFamily: MONO, fontWeight: 500, fontSize: 16, fontVariantNumeric: "tabular-nums" };
 function Th({ children, className = "" }) {
   return <th className={"text-left text-[11px] font-mono font-normal text-zinc-500 uppercase tracking-wider py-3 " + className}>{children}</th>;
 }
@@ -289,7 +279,7 @@ function App() {
                     </div>
                     <div className="flex items-center gap-3 min-w-0">
                       <Avatar src={d.img} g={d.g} e={d.e} className="w-10 h-10 rounded-[11px] text-lg shrink-0" />
-                      <span className="truncate" style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: 15, fontWeight: 600, letterSpacing: "-0.012em", color: "#F5F5F5" }}>{d.name}</span>
+                      <span className="truncate" style={{ fontFamily: MONO, fontSize: 15, fontWeight: 600, letterSpacing: "-0.012em", color: "#F5F5F5" }}>{d.name}</span>
                     </div>
                     <span style={{ ...VAL, fontWeight: 600, color: "#3fd35f" }}>{d.win}%</span>
                     <span style={{ ...VAL, color: "#eceef0" }}>{d.avg}x</span>
