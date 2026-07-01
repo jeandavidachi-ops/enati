@@ -80,8 +80,8 @@ function VsLogo({ className = "" }) {
 function Stat({ label, value, valueClass = "text-white" }) {
   return (
     <div>
-      <div className="text-[11px] text-zinc-500 font-mono">{label}</div>
-      <div className={"text-sm font-mono mt-0.5 " + valueClass}>{value}</div>
+      <div className="text-[clamp(11px,0.75vw,13px)] text-zinc-500 font-mono">{label}</div>
+      <div className={"text-[clamp(14px,1vw,17px)] font-mono mt-0.5 " + valueClass}>{value}</div>
     </div>
   );
 }
@@ -98,7 +98,7 @@ function Socials() {
 function BlocksThumb({ src, g, e }) {
   const [err, setErr] = useState(false);
   return (
-    <div className="relative w-28 h-28 flex-none overflow-hidden rounded-[14px] bg-[#0d0d0d]"
+    <div className="relative w-[clamp(112px,8vw,150px)] h-[clamp(112px,8vw,150px)] flex-none overflow-hidden rounded-[14px] bg-[#0d0d0d]"
       style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.04), inset 0 12px 30px rgba(0,0,0,0.34), inset 0 -8px 20px rgba(0,0,0,0.30), 0 4px 14px rgba(0,0,0,0.28)" }}>
       {src && !err
         ? <img src={src} onError={() => setErr(true)} className="absolute inset-0 w-full h-full object-cover" />
@@ -117,7 +117,7 @@ function BlocksCard({ image, name, stats, g, e }) {
       <div className="relative flex gap-4">
         <BlocksThumb src={image} g={g} e={e} />
         <div className="flex-1 min-w-0 flex flex-col">
-          <div className="font-semibold text-white truncate text-[15px]">{name}</div>
+          <div className="font-semibold text-white truncate text-[clamp(15px,1.05vw,19px)]">{name}</div>
           <div className="grid grid-cols-3 gap-2 mt-3">
             {stats.map((s, i) => (
               <Stat key={i} label={s.label} value={s.value} valueClass={s.positive ? "text-emerald-400" : "text-white"} />
@@ -231,8 +231,8 @@ function App() {
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
       <div className="flex flex-col flex-1 bg-[#0b0b0c]">
-        <header className="px-6 py-5">
-          <div className="max-w-[1280px] mx-auto w-full flex items-center gap-6">
+        <header className="px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-5">
+          <div className="w-full flex items-center gap-6">
           <a href="/" className="text-2xl font-black tracking-[0.15em] italic select-none">VERSUS</a>
           <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-300">
             <a className={navCls(TYPE === "ticker")} href="/ticker">Tickers</a>
@@ -257,8 +257,8 @@ function App() {
           </div>
         </header>
 
-        <main className="flex-1 px-6 py-8">
-          <div className="max-w-[1280px] mx-auto">
+        <main className="flex-1 px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-8">
+          <div className="w-full">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
                 <h1 className="text-3xl font-bold">{title}</h1>
@@ -267,7 +267,7 @@ function App() {
               <a href="/" className="text-sm px-4 py-2 rounded-xl bg-zinc-900 ring-1 ring-white/10 text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">← Home</a>
             </div>
 
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5 mt-6">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-6">
               {TYPE === "group"
                 ? pageItems.map((d, i) => (
                     <BlocksCard key={start + i} image={d.img} name={d.name} g={d.g} e={d.e}
@@ -293,8 +293,8 @@ function App() {
           </div>
         </main>
 
-        <footer className="px-6 py-8">
-          <div className="max-w-[1280px] mx-auto w-full flex flex-col md:flex-row gap-4 md:items-end md:justify-between text-xs text-zinc-500">
+        <footer className="px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-8">
+          <div className="w-full flex flex-col md:flex-row gap-4 md:items-end md:justify-between text-xs text-zinc-500">
           <div>
             <div className="text-white font-black text-xl tracking-[0.15em] italic mb-3">Versus</div>
             <p className="max-w-2xl leading-relaxed">
