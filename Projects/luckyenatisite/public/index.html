@@ -265,7 +265,7 @@ function Versus() {
   useEffect(() => {
     fetch("/api/all-groups-stats").then(r => r.json()).then(res => {
       const all = res.data || [];
-      setGroups(all.slice(0, 8).map((g, i) => ({
+      setGroups(all.slice(0, 12).map((g, i) => ({
         id: g.group_id,
         name: g.group_name || "Unknown",
         win: Math.round(g.win_rate || 0),
@@ -295,7 +295,7 @@ function Versus() {
   // Charge les derniers coins (Popular Tickers) + leur image
   useEffect(() => {
     fetch("/api/latest-records").then(r => r.json()).then(res => {
-      const data = (res.data || []).slice(0, 8).map((c, i) => ({
+      const data = (res.data || []).slice(0, 12).map((c, i) => ({
         sym: c.coin_name || "?",
         group: c.group_name || "",
         mc: fmtMC(c.market_cap),
@@ -323,8 +323,8 @@ function Versus() {
           <div className="max-w-[1280px] mx-auto w-full flex items-center gap-6">
           <span className="text-2xl font-black tracking-[0.15em] italic select-none">VERSUS</span>
           <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-300">
-            <a className="hover:text-white" href="#tickers">Tickers</a>
-            <a className="hover:text-white" href="#groups">Groups</a>
+            <a className="hover:text-white" href="/ticker">Tickers</a>
+            <a className="hover:text-white" href="/group">Groups</a>
             <a className="hover:text-white" href="/leaderboard">Leaderboard</a>
             <span className="flex items-center gap-2">
               <span className="text-zinc-300">Duels</span>
@@ -379,7 +379,7 @@ function Versus() {
             </div>
             {groups.length === 0 && <p className="text-sm text-zinc-600 mt-5">No groups yet.</p>}
             <div className="flex justify-start mt-6">
-              <a href="/leaderboard" className="rounded-xl bg-zinc-900 ring-1 ring-white/10 px-5 py-2.5 text-sm font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">Explore all</a>
+              <a href="/group" className="rounded-xl bg-zinc-900 ring-1 ring-white/10 px-5 py-2.5 text-sm font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">Explore all</a>
             </div>
           </section>
 
@@ -403,7 +403,7 @@ function Versus() {
             </div>
             {tickers.length === 0 && <p className="text-sm text-zinc-600 mt-5">No tokens yet.</p>}
             <div className="flex justify-start mt-6">
-              <a href="/leaderboard" className="rounded-xl bg-zinc-900 ring-1 ring-white/10 px-5 py-2.5 text-sm font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">Explore all</a>
+              <a href="/ticker" className="rounded-xl bg-zinc-900 ring-1 ring-white/10 px-5 py-2.5 text-sm font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">Explore all</a>
             </div>
           </section>
           </div>

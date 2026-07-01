@@ -150,6 +150,19 @@ app.get('/leaderboards', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/leaderboards.html'));
 });
 
+// Alias so the nav link /leaderboard also works
+app.get('/leaderboard', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/leaderboards.html'));
+});
+
+// Explore pages: all groups / all tickers (paginated). Same file, branches on the path.
+app.get('/group', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/explore.html'));
+});
+app.get('/ticker', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/explore.html'));
+});
+
 // Route for the token images test page
 app.get('/test-token-images', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/test-token-images.html'));
