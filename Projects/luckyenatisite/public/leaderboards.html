@@ -149,7 +149,7 @@ function Podium({ d, rank }) {
       </div>
 
       {/* card */}
-      <div style={{ position: "relative", marginTop: "clamp(24px, 2.6vw, 48px)", borderRadius: "clamp(16px, 1.8vw, 26px)", overflow: "hidden", padding: "clamp(26px, 3.2vw, 52px) clamp(12px, 1.6vw, 26px) clamp(16px, 1.8vw, 30px)", background: c.cardBg, border: `1px solid ${c.cardBorder}`, boxShadow: `0 40px 80px -34px rgba(0,0,0,0.95), 0 0 44px -12px ${c.cardGlow}, inset 0 1px 0 rgba(255,240,210,0.06)` }}>
+      <a href={d && d.id ? ("/group/" + d.id) : undefined} style={{ display: "block", position: "relative", marginTop: "clamp(24px, 2.6vw, 48px)", borderRadius: "clamp(16px, 1.8vw, 26px)", overflow: "hidden", padding: "clamp(26px, 3.2vw, 52px) clamp(12px, 1.6vw, 26px) clamp(16px, 1.8vw, 30px)", background: c.cardBg, border: `1px solid ${c.cardBorder}`, boxShadow: `0 40px 80px -34px rgba(0,0,0,0.95), 0 0 44px -12px ${c.cardGlow}, inset 0 1px 0 rgba(255,240,210,0.06)`, cursor: (d && d.id) ? "pointer" : "default" }}>
         <div style={{ ...ov, background: `linear-gradient(180deg, ${c.sheen} 0%, transparent 26%)` }} />
         <div style={{ ...ov, background: `radial-gradient(90% 60% at 50% 118%, ${c.leak} 0%, transparent 64%)` }} />
         <div style={{ ...ov, backgroundImage: c.embers }} />
@@ -162,7 +162,7 @@ function Podium({ d, rank }) {
             {d ? d.name : "—"}
           </div>
         </div>
-      </div>
+      </a>
     </div>
   );
 }
@@ -267,10 +267,10 @@ function App() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ ...VAL, fontWeight: 700, fontSize: "clamp(18px,1.2vw,24px)", color: rankColor }}>{rank}</span>
                     </div>
-                    <div className="flex items-center gap-3 min-w-0">
+                    <a href={d.id ? ("/group/" + d.id) : undefined} className={"flex items-center gap-3 min-w-0" + (d.id ? " cursor-pointer group/row" : "")}>
                       <Avatar src={d.img} g={d.g} e={d.e} className="w-[clamp(40px,3vw,56px)] h-[clamp(40px,3vw,56px)] rounded-[11px] text-lg shrink-0" />
-                      <span className="truncate" style={{ fontFamily: MONO, fontSize: "clamp(15px,1vw,19px)", fontWeight: 600, letterSpacing: "-0.012em", color: "#F5F5F5" }}>{d.name}</span>
-                    </div>
+                      <span className="truncate group-hover/row:underline" style={{ fontFamily: MONO, fontSize: "clamp(15px,1vw,19px)", fontWeight: 600, letterSpacing: "-0.012em", color: "#F5F5F5" }}>{d.name}</span>
+                    </a>
                     <span style={{ ...VAL, fontWeight: 600, color: "#3fd35f" }}>{d.win}%</span>
                     <span style={{ ...VAL, color: "#eceef0" }}>{d.avg}x</span>
                     <span style={{ ...VAL, fontWeight: 600, color: "#F2B23A" }}>{d.high}x</span>

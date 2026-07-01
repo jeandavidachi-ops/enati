@@ -190,6 +190,12 @@ async def handle_contract_address(message: Message, state: FSMContext):
         group_username = message.chat.title
         group_id = message.chat.id
 
+        # Auteur du call (pour la page de profil du groupe / Top Callers).
+        caller = message.from_user
+        caller_id = caller.id if caller else None
+        caller_username = caller.username if caller else None
+        caller_name = caller.full_name if caller else None
+
         group_current_stat = md.sum_current_stat_for_group(group_id)
 
         info_message = "⚔️ ENATI\n\n"
@@ -210,7 +216,8 @@ async def handle_contract_address(message: Message, state: FSMContext):
         else:
             group_photo = 'None'
 
-        md.add_or_update_coin(address, coin_name, marketcap, 0, 0, 0, creation_time, group_username, group_id, group_photo)
+        md.add_or_update_coin(address, coin_name, marketcap, 0, 0, 0, creation_time, group_username, group_id, group_photo,
+                              caller_id=caller_id, caller_username=caller_username, caller_name=caller_name)
         group_position = md.get_group_position_by_wins(group_id)
 
         info_message += (

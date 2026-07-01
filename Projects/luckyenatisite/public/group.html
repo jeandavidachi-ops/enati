@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Group — Versus</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body{margin:0;background:#0b0b0c}
+  html{scrollbar-color:#27272a #0b0b0c;scrollbar-width:thin}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:#0b0b0c}
+  ::-webkit-scrollbar-thumb{background:#27272a;border-radius:6px}
+  ::-webkit-scrollbar-thumb:hover{background:#3f3f46}
+  .no-scrollbar::-webkit-scrollbar{display:none}
+  .no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const MONO = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+
+const GRADS = [
+  ["#84cc16","#065f46"],["#38bdf8","#b45309"],["#34d399","#a21caf"],["#64748b","#18181b"],
+  ["#9333ea","#3730a3"],["#ea580c","#991b1b"],["#db2777","#881337"],["#0891b2","#1e3a8a"],
+];
+const gradOf = (i) => GRADS[Math.abs(i) % GRADS.length];
+const initialOf = (s) => (s && s.trim() ? s.trim()[0].toUpperCase() : "?");
+
+const SearchIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+    <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+// Pastille dégradée avec initiale (avatar par défaut d'un caller).
+function Blob({ label, i, size }) {
+  const [a, b] = gradOf(i);
+  return (
+    <div className="shrink-0 flex items-center justify-center font-mono font-semibold text-white"
+      style={{ width: size, height: size, borderRadius: "26%", fontSize: `calc(${size} * 0.42)`,
+               background: `linear-gradient(150deg, ${a}, ${b})`, boxShadow: "inset 0 2px 6px rgba(255,255,255,0.22), inset 0 -8px 14px rgba(0,0,0,0.38)" }}>
+      {initialOf(label)}
+    </div>
+  );
+}
+
+function GroupAvatar({ src, label, size, radius }) {
+  const [err, setErr] = useState(false);
+  if (!src || err) {
+    return (
+      <div className="flex items-center justify-center font-mono font-bold text-white"
+        style={{ width: size, height: size, borderRadius: radius, fontSize: `calc(${size} * 0.4)`,
+                 background: "linear-gradient(150deg, #3f3f46, #18181b)" }}>{initialOf(label)}</div>
+    );
+  }
+  return <img src={src} onError={() => setErr(true)} className="object-cover bg-zinc-800"
+              style={{ width: size, height: size, borderRadius: radius }} />;
+}
+
+function Header() {
+  return (
+    <header className="px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-5">
+      <div className="w-full flex items-center gap-6">
+        <a href="/" className="text-2xl font-black tracking-[0.15em] italic select-none">VERSUS</a>
+        <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-300">
+          <a className="hover:text-white" href="/ticker">Tickers</a>
+          <a className="hover:text-white" href="/group">Groups</a>
+          <a className="hover:text-white" href="/leaderboard">Leaderboard</a>
+          <span className="flex items-center gap-2">
+            <span className="text-zinc-300">Duels</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded border border-lime-400/60 text-lime-400 font-semibold">SOON</span>
+          </span>
+        </nav>
+        <div className="flex-1 max-w-xl mx-auto hidden sm:block">
+          <div className="flex items-center gap-2 rounded-xl bg-zinc-900 ring-1 ring-white/10 px-3 py-2 text-zinc-400">
+            <SearchIcon className="w-4 h-4" />
+            <input placeholder="Search groups or tickers" className="bg-transparent outline-none text-sm flex-1 placeholder-zinc-500" />
+          </div>
+        </div>
+        <button className="text-sm px-4 py-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition">Log In</button>
+      </div>
+    </header>
+  );
+}
+
+const TABS = ["Overview", "Calls", "Members", "Duels", "Activity"];
+function Tabs() {
+  const [v, setV] = useState("Overview");
+  return (
+    <div className="flex items-center gap-6 border-b border-white/10 mt-8 overflow-x-auto no-scrollbar">
+      {TABS.map((t) => {
+        const soon = t === "Duels";
+        const active = v === t;
+        return (
+          <button key={t} onClick={() => !soon && setV(t)}
+            className={"relative pb-3 text-sm font-mono whitespace-nowrap transition-colors " +
+              (active ? "text-white" : "text-zinc-500 hover:text-zinc-300")}>
+            <span className="flex items-center gap-1.5">
+              {t}
+              {soon && <span className="text-[9px] px-1 py-0.5 rounded border border-lime-400/50 text-lime-400">SOON</span>}
+            </span>
+            {active && <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-white rounded-full" />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function StatCard({ s }) {
+  return (
+    <div className="rounded-2xl bg-[#0c0d0f] border border-white/[0.08] p-5">
+      <div className="font-mono text-[11px] uppercase tracking-wider text-zinc-500">{s.label}</div>
+      <div className="font-mono font-bold mt-2" style={{ fontSize: "clamp(22px,2.2vw,30px)", color: s.color }}>{s.value}</div>
+      <div className="font-mono text-xs text-zinc-500 mt-1 truncate">{s.sub}</div>
+    </div>
+  );
+}
+
+const CALLER_COLS = "48px minmax(120px,1.6fr) 1fr 1fr 1fr 0.8fr";
+function TopCallers({ callers }) {
+  return (
+    <div className="rounded-2xl bg-[#0c0d0f] border border-white/[0.08] overflow-hidden">
+      <div className="flex items-center justify-between px-5 pt-5 pb-3">
+        <span style={{ fontFamily: MONO }} className="text-lg font-semibold text-[#ededf0]">Top Callers</span>
+        <span className="text-xs uppercase tracking-wider text-zinc-500">{callers.length} members</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: CALLER_COLS, gap: 12 }}
+        className="px-5 py-2 text-[11px] uppercase tracking-wider text-zinc-500 font-mono border-t border-white/[0.06]">
+        <span className="text-center">#</span><span>Caller</span><span>Win Rate</span>
+        <span>Avg. Mult.</span><span>Highest</span><span className="text-right">Calls</span>
+      </div>
+      {callers.length === 0 && (
+        <div className="px-5 py-8 text-center text-sm text-zinc-500 font-mono">No callers recorded yet.</div>
+      )}
+      {callers.map((c, i) => (
+        <div key={i} style={{ display: "grid", gridTemplateColumns: CALLER_COLS, gap: 12 }}
+          className="px-5 py-3 items-center border-t border-white/[0.06] hover:bg-white/[0.02] font-mono text-sm">
+          <span className="text-center text-zinc-500">{i + 1}</span>
+          <span className="flex items-center gap-2.5 min-w-0">
+            <Blob label={c.name} i={i} size="34px" />
+            <span className="truncate text-white">{c.name}</span>
+          </span>
+          <span className="text-[#3fd35f]">{c.win}</span>
+          <span className="text-zinc-200">{c.avg}</span>
+          <span className="text-zinc-200">{c.high}</span>
+          <span className="text-right text-zinc-200">{c.calls}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const OUTCOME_STYLE = {
+  Win: "text-[#3fd35f] border-[#3fd35f]/40",
+  Lost: "text-red-400 border-red-400/40",
+  Live: "text-amber-400 border-amber-400/40",
+};
+function RecentCalls({ recent }) {
+  const fmtMC = (v) => {
+    if (v == null) return "—";
+    const n = typeof v === "string" ? parseFloat(v.replace(/,/g, "")) : v;
+    if (isNaN(n)) return String(v);
+    if (n >= 1e9) return "$" + (n / 1e9).toFixed(1) + "B";
+    if (n >= 1e6) return "$" + (n / 1e6).toFixed(1) + "M";
+    if (n >= 1e3) return "$" + (n / 1e3).toFixed(1) + "K";
+    return "$" + n;
+  };
+  return (
+    <div className="rounded-2xl bg-[#0c0d0f] border border-white/[0.08] overflow-hidden">
+      <div className="px-5 pt-5 pb-3">
+        <span style={{ fontFamily: MONO }} className="text-lg font-semibold text-[#ededf0]">Recent Calls</span>
+      </div>
+      {recent.length === 0 && (
+        <div className="px-5 py-8 text-center text-sm text-zinc-500 font-mono">No calls yet.</div>
+      )}
+      {recent.map((r, i) => (
+        <div key={i} className="flex items-center gap-3 px-5 py-3 border-t border-white/[0.06] hover:bg-white/[0.02] font-mono text-sm">
+          <Blob label={r.token} i={i + 3} size="34px" />
+          <div className="min-w-0 flex-1">
+            <div className="text-white truncate">{r.token}</div>
+            <div className="text-xs text-zinc-500 truncate">by {r.by} · {r.at || ""}</div>
+          </div>
+          <div className="text-right hidden sm:block">
+            <div className="text-zinc-400 text-xs">MCap</div>
+            <div className="text-zinc-200">{fmtMC(r.mcapThen)}</div>
+          </div>
+          <div className="text-zinc-200 w-14 text-right">{r.mult}</div>
+          <span className={"text-[11px] px-2 py-0.5 rounded-full border " + (OUTCOME_STYLE[r.outcome] || "text-zinc-400 border-white/20")}>
+            {r.outcome}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function App() {
+  const [data, setData] = useState(null);
+  const [notFound, setNotFound] = useState(false);
+
+  // group_id = dernier segment de /group/<id>
+  const gid = window.location.pathname.replace(/\/+$/, "").split("/").pop();
+
+  useEffect(() => {
+    fetch("/api/group/" + encodeURIComponent(gid))
+      .then((r) => r.json())
+      .then((res) => { if (res.success) setData(res.data); else setNotFound(true); })
+      .catch(() => setNotFound(true));
+  }, []);
+
+  const hero = data && data.hero;
+  const photo = gid ? "/api/group-photo/" + gid : null;
+
+  return (
+    <div className="min-h-screen bg-[#0b0b0c] font-mono text-white">
+      <Header />
+      <main className="px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-6">
+        <div className="w-full max-w-[1200px] mx-auto">
+          <a href="/group" className="text-sm text-zinc-500 hover:text-zinc-300">← Groups</a>
+
+          {notFound && (
+            <div className="mt-16 text-center text-zinc-500">Group not found.</div>
+          )}
+
+          {!notFound && (
+            <>
+              {/* Hero */}
+              <div className="flex items-center gap-5 mt-6">
+                <GroupAvatar src={photo} label={hero ? hero.group_name : "?"} size="clamp(84px,9vw,126px)" radius="28px" />
+                <div className="min-w-0">
+                  <h1 className="font-bold truncate" style={{ fontSize: "clamp(24px,3vw,40px)" }}>
+                    {hero ? hero.group_name : "…"}
+                  </h1>
+                  <div className="flex items-center gap-3 mt-2 text-sm">
+                    {hero && hero.rank && (
+                      <span className="px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-200">Rank #{hero.rank}</span>
+                    )}
+                    <span className="text-zinc-500">Group profile</span>
+                  </div>
+                </div>
+              </div>
+
+              <Tabs />
+
+              {/* Hero stats */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mt-8">
+                {(hero ? hero.stats : []).map((s, i) => <StatCard key={i} s={s} />)}
+              </div>
+
+              {/* Callers + Recent */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-6">
+                <TopCallers callers={data ? data.callers : []} />
+                <RecentCalls recent={data ? data.recent : []} />
+              </div>
+            </>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

@@ -21,18 +21,21 @@ db = client['enati']
 users_collection = db['coins']
 monitoring_collection = db['monitoring']  # compteur des tokens actuellement monitores
 
-def add_or_update_coin(contract_address, coin_name, market_cap, wins, defeat, currect_stat, creation_time, group_name, group_id, group_photo):
+def add_or_update_coin(contract_address, coin_name, market_cap, wins, defeat, currect_stat, creation_time, group_name, group_id, group_photo,
+                       caller_id=None, caller_username=None, caller_name=None):
     # Define the query to check if a document with the given contract_address and group_id exists
     query = {'contract_address': contract_address, 'group_id': group_id}
-    
+
     # Find the existing document with the same contract_address and group_id
     existing_document = users_collection.find_one(query)
-    
+
     if existing_document:
         # If the document with the same contract_address and group_id exists, do nothing
         return
     else:
         # If no document exists with the given contract_address and group_id, insert a new one
+        # caller_* : auteur Telegram du call (pour la page de profil du groupe). Facultatif
+        # pour rester compatible avec les documents historiques qui ne l'ont pas.
         new_entry = {
             'contract_address': contract_address,
             'coin_name': coin_name,
@@ -44,6 +47,9 @@ def add_or_update_coin(contract_address, coin_name, market_cap, wins, defeat, cu
             'group_name': group_name,
             'group_id': group_id,
             'group_photo': group_photo,
+            'caller_id': caller_id,
+            'caller_username': caller_username,
+            'caller_name': caller_name,
         }
         result = users_collection.insert_one(new_entry)
         return result

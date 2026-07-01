@@ -40,6 +40,12 @@ def explore_page():
     return app.send_static_file('explore.html')
 
 
+@app.route('/group/<group_id>')
+def group_profile_page(group_id):
+    # Page de profil d'un groupe (le group_id est lu cote client depuis l'URL).
+    return app.send_static_file('group.html')
+
+
 # MongoDB connection setup
 MONGO_DB_URL = os.environ['MONGO_DB_URL']
 client = MongoClient(MONGO_DB_URL)
@@ -386,6 +392,125 @@ def get_all_groups_stats_endpoint():
     """
     result = get_all_groups_stats()
     return jsonify(result)
+
+
+def get_group_detail(group_id):
+    """
+    Detail d'un groupe pour sa page de profil : hero + heroStats, top callers
+    (par auteur du call) et derniers calls. Les documents historiques sans
+    'caller_id' sont regroupes sous 'Unknown'.
+    """
+    gid = int(group_id)
+
+    # --- Hero + rang (reutilise le classement canonique de get_all_groups_stats) ---
+    all_stats = get_all_groups_stats().get('data', [])
+    rank = None
+    hero = None
+    for i, g in enumerate(all_stats):
+        if g['group_id'] == gid:
+            rank = i + 1
+            hero = g
+            break
+
+    if hero is None:
+        return {'success': False, 'error': 'group_not_found',
+                'message': f'Group {gid} not found'}
+
+    calls = hero.get('total_members', 0)
+    total_stat = hero.get('total_current_stat', 0)
+    avg_mult = (total_stat / calls) if calls > 0 else 0
+
+    hero_stats = [
+        {'label': 'Win Rate', 'value': f"{round(hero.get('win_rate', 0))}%",
+         'sub': f"{hero.get('total_wins', 0)} won · {hero.get('total_defeats', 0)} lost",
+         'color': '#3fd35f'},
+        {'label': 'Avg. Multiplier', 'value': f"{avg_mult:.1f}x",
+         'sub': f"Across {calls} calls", 'color': '#F5F5F5'},
+        {'label': 'Highest Multiplier', 'value': f"{hero.get('max_current_stat', 0)}x",
+         'sub': 'All time', 'color': '#F5F5F5'},
+        {'label': 'Total Calls', 'value': str(calls),
+         'sub': f"{hero.get('total_defeats', 0)} lost", 'color': '#F5F5F5'},
+        {'label': 'Duels', 'value': '—', 'sub': 'Soon', 'color': '#797d84'},
+    ]
+
+    # --- Top callers : agregation par auteur du call ---
+    caller_pipeline = [
+        {'$match': {'group_id': gid}},
+        {'$group': {
+            '_id': {'$ifNull': ['$caller_id', 'unknown']},
+            'name': {'$first': {'$ifNull': ['$caller_name', 'Unknown']}},
+            'username': {'$first': '$caller_username'},
+            'wins': {'$sum': '$wins'},
+            'defeats': {'$sum': '$defeat'},
+            'total_stat': {'$sum': '$current_stat'},
+            'max_stat': {'$max': '$current_stat'},
+            'calls': {'$sum': 1},
+        }},
+        {'$sort': {'calls': -1, 'total_stat': -1}},
+        {'$limit': 10},
+    ]
+    callers = []
+    for c in users_collection.aggregate(caller_pipeline):
+        c_calls = c.get('calls', 0) or 0
+        wins = c.get('wins', 0) or 0
+        defeats = c.get('defeats', 0) or 0
+        win_rate = round((wins / (wins + defeats) * 100)) if (wins + defeats) > 0 else 0
+        avg = (c.get('total_stat', 0) / c_calls) if c_calls > 0 else 0
+        callers.append({
+            'caller_id': None if c['_id'] == 'unknown' else c['_id'],
+            'name': c.get('name') or 'Unknown',
+            'username': c.get('username'),
+            'win': f"{win_rate}%",
+            'avg': f"{avg:.1f}x",
+            'high': f"{c.get('max_stat', 0)}x",
+            'calls': c_calls,
+        })
+
+    # --- Recent calls (derniers documents du groupe) ---
+    recent = []
+    for r in users_collection.find({'group_id': gid}).sort('creation_time', -1).limit(10):
+        if r.get('wins'):
+            outcome = 'Win'
+        elif r.get('defeat'):
+            outcome = 'Lost'
+        else:
+            outcome = 'Live'
+        recent.append({
+            'token': r.get('coin_name', '?'),
+            'contract_address': r.get('contract_address'),
+            'by': r.get('caller_name') or 'Unknown',
+            'at': r.get('creation_time'),
+            'mcapThen': r.get('market_cap'),
+            'mult': f"{r.get('current_stat', 0)}x",
+            'outcome': outcome,
+        })
+
+    return {
+        'success': True,
+        'data': {
+            'hero': {
+                'group_id': gid,
+                'group_name': hero.get('group_name', 'Unknown'),
+                'rank': rank,
+                'stats': hero_stats,
+            },
+            'callers': callers,
+            'recent': recent,
+        },
+    }
+
+
+@app.route('/api/group/<group_id>', methods=['GET'])
+def get_group_detail_endpoint(group_id):
+    try:
+        result = get_group_detail(group_id)
+        status = 200 if result.get('success') else 404
+        return jsonify(result), status
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'invalid_group_id'}), 400
+    except Exception as e:
+        logger.error(f"Error in get_group_detail for {group_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 def get_shared_contracts_analysis():
     """
