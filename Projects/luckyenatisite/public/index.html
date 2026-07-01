@@ -323,7 +323,8 @@ function Versus() {
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
       <div className="flex flex-col flex-1 bg-[#0b0b0c]">
-        <header className="flex items-center gap-6 px-6 py-5">
+        <header className="px-6 py-5">
+          <div className="max-w-[1280px] mx-auto w-full flex items-center gap-6">
           <span className="text-2xl font-black tracking-[0.15em] italic select-none">VERSUS</span>
           <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-300">
             <a className="hover:text-white" href="#tickers">Tickers</a>
@@ -345,10 +346,11 @@ function Versus() {
             <button className="text-sm px-4 py-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition">Sign In</button>
             <button className="text-sm px-4 py-2 rounded-full bg-white text-black font-semibold hover:bg-zinc-200 transition">Sign Up</button>
           </div>
+          </div>
         </header>
 
         <div className="border-y border-white/5 px-6 py-3">
-          <div className="flex items-center gap-5 overflow-x-auto no-scrollbar">
+          <div className="max-w-[1280px] mx-auto w-full flex items-center gap-5 overflow-x-auto no-scrollbar">
             <span className="text-sm text-zinc-400 shrink-0 flex items-center gap-2">Groups <span className="text-zinc-600">⧉</span></span>
             {groups.map((g, i) => (
               <div key={i} className="flex items-center gap-2 shrink-0">
@@ -360,6 +362,7 @@ function Versus() {
         </div>
 
         <main className="flex-1 px-6 py-8">
+          <div className="max-w-[1280px] mx-auto">
           <section id="groups">
             <div className="flex items-start justify-between">
               <div>
@@ -407,9 +410,11 @@ function Versus() {
               <a href="/leaderboard" className="rounded-xl bg-zinc-900 ring-1 ring-white/10 px-5 py-2.5 text-sm font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">Explore all</a>
             </div>
           </section>
+          </div>
         </main>
 
-        <footer className="px-6 py-8 flex flex-col md:flex-row gap-4 md:items-end md:justify-between text-xs text-zinc-500">
+        <footer className="px-6 py-8">
+          <div className="max-w-[1280px] mx-auto w-full flex flex-col md:flex-row gap-4 md:items-end md:justify-between text-xs text-zinc-500">
           <div>
             <div className="text-white font-black text-xl tracking-[0.15em] italic mb-3">Versus</div>
             <p className="max-w-2xl leading-relaxed">
@@ -419,6 +424,7 @@ function Versus() {
             </p>
           </div>
           <p className="shrink-0">© 2026 Versus. All rights reserved.</p>
+          </div>
         </footer>
       </div>
     </div>
