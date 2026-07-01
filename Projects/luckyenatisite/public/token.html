@@ -197,7 +197,7 @@ function App() {
     <div className="min-h-screen bg-[#0b0b0c] font-mono text-white">
       <Header />
       <main className="px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-6">
-        <div className="w-full max-w-[1200px] mx-auto">
+        <div className="w-full">
           <a href="/ticker" className="text-sm text-zinc-500 hover:text-zinc-300">← Tickers</a>
 
           {notFound && <div className="mt-16 text-center text-zinc-500">Token not found.</div>}
@@ -248,10 +248,10 @@ function App() {
                 </div>
                 {chartUrl ? (
                   <iframe src={chartUrl} loading="lazy" title="DexScreener chart"
-                    style={{ width: "100%", height: "clamp(380px,52vh,560px)", border: 0, display: "block" }} />
+                    style={{ width: "100%", height: "clamp(460px,70vh,780px)", border: 0, display: "block" }} />
                 ) : (
                   <div className="flex items-center justify-center text-zinc-500 text-sm"
-                       style={{ height: "clamp(380px,52vh,560px)" }}>Chart unavailable for this token.</div>
+                       style={{ height: "clamp(460px,70vh,780px)" }}>Chart unavailable for this token.</div>
                 )}
               </div>
 
