@@ -248,7 +248,7 @@ function App() {
           <div className="mt-12 overflow-x-auto">
             <div style={{ minWidth: 860, borderRadius: 16, overflow: "hidden", background: "#0c0d0f", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 24px 60px -30px rgba(0,0,0,0.85)" }}>
               {/* header */}
-              <div style={{ display: "grid", gridTemplateColumns: TABLE_COLS, alignItems: "center", gap: 14, padding: "clamp(18px,1.6vw,28px) clamp(16px,3vw,28px) 13px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: TABLE_COLS, alignItems: "center", gap: 14, padding: "clamp(18px,1.6vw,28px) clamp(16px,3vw,28px) 13px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                 <span style={{ ...THS, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>Position <span style={{ fontSize: 11 }}>↓</span></span>
                 <span style={{ ...THS, paddingLeft: 52 }}>Group</span>
                 <span style={THS}>Win Rate</span>
@@ -263,7 +263,7 @@ function App() {
                 const rank = i + 1;
                 const rankColor = rank === 1 ? "#F2B23A" : rank === 3 ? "#E9843C" : "#ededf0";
                 return (
-                  <div key={i} className="hover:bg-white/[0.02]" style={{ display: "grid", gridTemplateColumns: TABLE_COLS, alignItems: "center", gap: 14, padding: "clamp(14px,1.1vw,22px) clamp(16px,3vw,28px)", borderTop: "1px solid rgba(255,255,255,0.07)", transition: "background .15s" }}>
+                  <div key={i} className="hover:bg-white/[0.02]" style={{ display: "grid", gridTemplateColumns: TABLE_COLS, alignItems: "center", gap: 14, padding: "clamp(14px,1.1vw,22px) clamp(16px,3vw,28px)", transition: "background .15s" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ ...VAL, fontWeight: 700, fontSize: "clamp(18px,1.2vw,24px)", color: rankColor }}>{rank}</span>
                     </div>
@@ -284,7 +284,7 @@ function App() {
                 );
               })}
               {rows.length === 0 && (
-                <div className="py-8 text-center text-zinc-600 text-sm" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>No groups yet.</div>
+                <div className="py-8 text-center text-zinc-600 text-sm">No groups yet.</div>
               )}
             </div>
           </div>
