@@ -34,6 +34,12 @@ def leaderboards_page():
     return app.send_static_file('leaderboards.html')
 
 
+@app.route('/group')
+@app.route('/ticker')
+def explore_page():
+    return app.send_static_file('explore.html')
+
+
 # MongoDB connection setup
 MONGO_DB_URL = os.environ['MONGO_DB_URL']
 client = MongoClient(MONGO_DB_URL)
