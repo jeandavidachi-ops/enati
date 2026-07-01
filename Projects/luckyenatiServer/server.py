@@ -46,6 +46,12 @@ def group_profile_page(group_id):
     return app.send_static_file('group.html')
 
 
+@app.route('/ticker/<path:address>')
+def token_page(address):
+    # Page d'un token (le contract address est lu cote client depuis l'URL).
+    return app.send_static_file('token.html')
+
+
 # MongoDB connection setup
 MONGO_DB_URL = os.environ['MONGO_DB_URL']
 client = MongoClient(MONGO_DB_URL)
@@ -303,6 +309,110 @@ def get_token_image_endpoint(contract_address):
     """
     result = get_token_image(contract_address)
     return jsonify(result)
+
+
+def _to_float(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def get_token_detail(address):
+    """
+    Detail d'un token pour sa page : identite + metriques live (DexScreener),
+    infos pour le chart embed (chain + pair_address), et la liste des groupes
+    qui ont pris le call (depuis la base 'coins').
+    """
+    # --- DexScreener : identite, metriques live, meilleure paire ---
+    token = {'name': None, 'symbol': None, 'image': None, 'chain': None, 'pair_address': None}
+    metrics = {'price': None, 'market_cap': None, 'volume_24h': None,
+               'liquidity': None, 'change_24h': None, 'holders': None, 'ath': None}
+    mcap_now = None
+    try:
+        url = f'https://api.dexscreener.com/latest/dex/tokens/{address}'
+        resp = requests.get(url, timeout=15)
+        if resp.status_code == 200:
+            pairs = (resp.json() or {}).get('pairs') or []
+            # On ne garde que les paires ou le token demande est le baseToken (sinon
+            # prix/mcap correspondraient a l'autre token de la paire).
+            addr_l = address.lower()
+            base_pairs = [p for p in pairs if ((p.get('baseToken') or {}).get('address') or '').lower() == addr_l]
+            pairs = base_pairs or pairs
+            if pairs:
+                # Paire la plus liquide = la plus representative pour le chart/metriques.
+                pairs.sort(key=lambda p: (_to_float((p.get('liquidity') or {}).get('usd')) or 0), reverse=True)
+                p = pairs[0]
+                base = p.get('baseToken') or {}
+                info = p.get('info') or {}
+                token['name'] = base.get('name')
+                token['symbol'] = base.get('symbol')
+                token['image'] = info.get('imageUrl')
+                token['chain'] = p.get('chainId')
+                token['pair_address'] = p.get('pairAddress')
+                metrics['price'] = _to_float(p.get('priceUsd'))
+                mcap_now = _to_float(p.get('marketCap')) or _to_float(p.get('fdv'))
+                metrics['market_cap'] = mcap_now
+                metrics['volume_24h'] = _to_float((p.get('volume') or {}).get('h24'))
+                metrics['liquidity'] = _to_float((p.get('liquidity') or {}).get('usd'))
+                metrics['change_24h'] = _to_float((p.get('priceChange') or {}).get('h24'))
+    except requests.RequestException as e:
+        logger.warning(f"DexScreener token detail failed for {address}: {e}")
+
+    # Image de secours (pump.fun) si DexScreener n'a rien.
+    if not token['image']:
+        fallback = get_token_image(address)
+        if fallback.get('success'):
+            token['image'] = fallback.get('image_url')
+            token['name'] = token['name'] or fallback.get('token_name')
+            token['symbol'] = token['symbol'] or fallback.get('token_symbol')
+
+    # --- Groupes qui ont pris le call (un document par groupe) ---
+    groups = []
+    for doc in users_collection.find({'contract_address': address}).sort('current_stat', -1):
+        token['name'] = token['name'] or doc.get('coin_name')
+        if doc.get('wins'):
+            outcome = 'Win'
+        elif doc.get('defeat'):
+            outcome = 'Lost'
+        else:
+            outcome = 'Live'
+        groups.append({
+            'group_id': doc.get('group_id'),
+            'group_name': doc.get('group_name', 'Unknown'),
+            'first_scan': doc.get('creation_time'),
+            'mcap_then': doc.get('market_cap'),
+            'calls': 1,
+            'mcap_now': mcap_now,
+            'mult': f"{doc.get('current_stat', 0)}x",
+            'outcome': outcome,
+        })
+
+    # Introuvable partout -> 404.
+    if not token['name'] and not groups:
+        return {'success': False, 'error': 'token_not_found',
+                'message': f'Token {address} not found'}
+
+    return {
+        'success': True,
+        'data': {
+            'address': address,
+            'token': token,
+            'metrics': metrics,
+            'groups': groups,
+        },
+    }
+
+
+@app.route('/api/token/<path:address>', methods=['GET'])
+def get_token_detail_endpoint(address):
+    try:
+        result = get_token_detail(address)
+        status = 200 if result.get('success') else 404
+        return jsonify(result), status
+    except Exception as e:
+        logger.error(f"Error in get_token_detail for {address}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 def get_all_groups_stats():
     """

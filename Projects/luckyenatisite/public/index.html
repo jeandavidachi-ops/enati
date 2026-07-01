@@ -396,6 +396,7 @@ function Versus() {
             <div className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-5">
               {tickers.map((d, i) => (
                 <BlocksCard key={i} image={d.img} name={d.sym} g={d.g} e={d.e}
+                  href={d.addr ? ("/ticker/" + encodeURIComponent(d.addr)) : null}
                   stats={[
                     { label: "Best", value: d.mult + "x", positive: true },
                     { label: "MC", value: d.mc },

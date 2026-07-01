@@ -282,6 +282,7 @@ function App() {
                   ))
                 : pageItems.map((d, i) => (
                     <BlocksCard key={start + i} image={d.img} name={d.sym} g={d.g} e={d.e}
+                      href={d.addr ? ("/ticker/" + encodeURIComponent(d.addr)) : null}
                       stats={[
                         { label: "Best", value: d.mult + "x", positive: true },
                         { label: "MC", value: d.mc },
