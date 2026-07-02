@@ -8,8 +8,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { theme: { extend: { fontFamily: {
+    sans: ['Inter','-apple-system','BlinkMacSystemFont','Segoe UI','Roboto','Helvetica','Arial','sans-serif'],
+    mono: ['Inter','-apple-system','BlinkMacSystemFont','Segoe UI','Roboto','Helvetica','Arial','sans-serif']
+  } } } };
+</script>
 <style>
-  body{margin:0;background:#0b0b0c}
+  body{margin:0;background:#0b0b0c;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
   html{scrollbar-color:#27272a #0b0b0c;scrollbar-width:thin}
   ::-webkit-scrollbar{width:10px;height:10px}
   ::-webkit-scrollbar-track{background:#0b0b0c}
