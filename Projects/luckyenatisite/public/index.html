@@ -418,7 +418,7 @@ function Versus() {
   useEffect(() => {
     const el = lbTopRef.current;
     if (!el) return;
-    const measure = () => setLbTop(el.getBoundingClientRect().height);
+    const measure = () => setLbTop(el.offsetHeight);
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -427,8 +427,22 @@ function Versus() {
   }, []);
   // Re-mesure quand la bande Groups se remplit (change sa hauteur)
   useEffect(() => {
-    if (lbTopRef.current) setLbTop(lbTopRef.current.getBoundingClientRect().height);
+    if (lbTopRef.current) setLbTop(lbTopRef.current.offsetHeight);
   }, [groups]);
+
+  // Dezoom global : sous 2000px, rendre l'interface comme un tres grand ecran (plus dense)
+  useEffect(() => {
+    const REF = 2000; // largeur "grand ecran" de reference
+    const applyZoom = () => {
+      const w = window.innerWidth;
+      // On ne zoome que la plage desktop (>=1024). <1024 = mobile => responsive natif, pas de zoom.
+      const z = (w >= 1024 && w < REF) ? (w / REF) : 1;
+      document.documentElement.style.zoom = String(z);
+    };
+    applyZoom();
+    window.addEventListener("resize", applyZoom);
+    return () => window.removeEventListener("resize", applyZoom);
+  }, []);
 
   // Charge le nombre de groupes par token (contract_address -> groups_count)
   useEffect(() => {
