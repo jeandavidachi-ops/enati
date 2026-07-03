@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Versus Leaderboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel">
+      <header class="tabs">
+        <nav class="tab-nav">
+          <a class="tab alert" href="#"><span class="dot"></span><span class="bell">●</span> Alerts</a>
+          <a class="tab" href="#">Tokens</a>
+          <a class="tab active" href="#">Leaderboard</a>
+          <a class="tab" href="#">Feed</a>
+        </nav>
+        <button class="collapse">≪</button>
+      </header>
+
+      <div class="content">
+        <div class="filters">
+          <button>24H</button>
+          <button>7D</button>
+          <button>30D</button>
+          <button class="selected">ALL</button>
+        </div>
+
+        <div class="your-rank">
+          <div class="rank-avatar logo">∞</div>
+          <div>
+            <div class="muted">Your rank</div>
+            <div class="rankline"><span>#</span> -</div>
+          </div>
+          <div class="pnl-head">
+            <div>PnL</div>
+            <strong>--</strong>
+          </div>
+        </div>
+
+        <div class="dash"></div>
+
+        <div id="rows" class="rows"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

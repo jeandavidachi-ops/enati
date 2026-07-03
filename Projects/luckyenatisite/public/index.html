@@ -32,6 +32,60 @@
   .rtj-btn:hover{background:#ffffff;transform:translateY(-2px);box-shadow:0 12px 30px -10px rgba(255,255,255,0.4)}
   .rtj-btn:hover svg{transform:translateX(5px);animation:none}
   .rtj-btn:active{transform:translateY(0);box-shadow:0 4px 14px -10px rgba(255,255,255,0.3)}
+
+  /* ---- Leaderboard sidebar (porte de new/versus-leaderboard-clean) ---- */
+  .lb-side{--lb-green:#00f078;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#f3f4f6}
+  .lb-side .panel{
+    width:300px;border-radius:9px;overflow:hidden;
+    background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.004) 34%),#0d0e12;
+    border:1px solid rgba(166,174,190,.35);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 16px 45px rgba(0,0,0,.48);
+  }
+  .lb-side .tabs{height:40px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#1b1c21 0%,#14151a 100%);border-bottom:1px solid rgba(255,255,255,.13)}
+  .lb-side .tab-nav{flex:1;display:flex;align-items:center;justify-content:space-between;padding-right:8px}
+  .lb-side .tab{position:relative;color:#b9bbc5;text-decoration:none;font-size:12px;font-weight:500;line-height:40px}
+  .lb-side .tab.active{color:#fff;font-weight:700}
+  .lb-side .tab.active:after{content:"";position:absolute;left:50%;bottom:-1px;width:52px;height:1px;transform:translateX(-50%);background:rgba(255,255,255,.34)}
+  .lb-side .alert{padding-left:14px}
+  .lb-side .bell{font-size:8px;color:#a8adb8;position:absolute;left:0;top:1px}
+  .lb-side .dot{position:absolute;left:5px;top:10px;width:5px;height:5px;border-radius:50%;background:#ff6a2a}
+  .lb-side .collapse{background:transparent;border:0;color:#a9abb6;font-size:15px;font-weight:700;padding:0 0 0 6px;line-height:1;cursor:pointer}
+  .lb-side .content{padding:14px 15px}
+  .lb-side .filters{display:flex;gap:10px;margin:0 0 18px 0}
+  .lb-side .filters button{height:24px;min-width:36px;padding:0 9px;border-radius:7px;border:1px solid rgba(255,255,255,.07);background:#101116;color:#8d909b;font-weight:700;font-size:11px;box-shadow:inset 0 1px 0 rgba(255,255,255,.02);cursor:pointer}
+  .lb-side .filters .selected{background:linear-gradient(180deg,#26272d,#1d1e24);color:#fff;border-color:rgba(255,255,255,.1)}
+  .lb-side .your-rank{height:54px;display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:10px}
+  .lb-side .rank-avatar{width:33px;height:33px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900}
+  .lb-side .logo{background:linear-gradient(135deg,#ff4955,#ff6266);color:#171b3c;letter-spacing:-6px;padding-right:6px}
+  .lb-side .muted{font-size:13px;color:#a9abb6;margin-bottom:4px}
+  .lb-side .rankline{font-size:13px;color:#cfd2db;font-weight:700}
+  .lb-side .rankline span{color:#2d70ff;font-size:17px;margin-right:3px}
+  .lb-side .pnl-head{text-align:right;color:#b8bac4;font-size:13px}
+  .lb-side .pnl-head strong{display:block;margin-top:4px;font-size:16px;color:#a9abb6}
+  .lb-side .dash{border-top:1px dashed rgba(255,255,255,.13);margin:9px 0 0}
+  .lb-side .rows{padding-top:0}
+  .lb-side .row{height:48px;display:grid;grid-template-columns:34px 40px 1fr auto;align-items:center;column-gap:8px;border-bottom:1px solid rgba(255,255,255,.045)}
+  .lb-side .place{width:30px;text-align:center;color:#c5c7d1;font-size:13px;font-weight:500}
+  .lb-side .medal{width:18px;height:22px;margin:0 auto;position:relative;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#151515}
+  .lb-side .medal:before{content:"";width:18px;height:18px;border-radius:50%;position:absolute;top:0;left:0;background:var(--m,#f4b92f)}
+  .lb-side .medal:after{content:"";position:absolute;bottom:0;width:10px;height:10px;border:2px solid var(--m,#f4b92f);border-top:0;clip-path:polygon(0 0,100% 0,50% 100%)}
+  .lb-side .medal span{position:relative;z-index:2}
+  .lb-side .silver{--m:#bdc0c6}.lb-side .bronze{--m:#df8731}
+  .lb-side .avatar{width:33px;height:33px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;background:linear-gradient(145deg,#333740,#111318);overflow:hidden}
+  .lb-side .avatar.blue{background:linear-gradient(135deg,#4456ff,#2635d8);color:#fff;letter-spacing:-6px;padding-right:6px}
+  .lb-side .avatar.cyan{background:#62c7ff;color:#131643;letter-spacing:-6px;padding-right:6px}
+  .lb-side .avatar.green{background:#21e66d;color:#151743;letter-spacing:-6px;padding-right:6px}
+  .lb-side .user strong{display:block;font-size:13px;line-height:16px;color:#f6f7fb;font-weight:800}
+  .lb-side .user small{display:block;color:#a9abb5;font-size:11px;line-height:15px;margin-top:1px}
+  .lb-side .right{text-align:right}
+  .lb-side .pnl{font-size:13px;font-weight:900;color:var(--lb-green);letter-spacing:-.2px;white-space:nowrap}
+  .lb-side .badges{display:flex;justify-content:flex-end;align-items:center;gap:0;margin-top:7px;height:14px}
+  .lb-side .badge{width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;margin-left:-3px;background:#24262d;border:1px solid rgba(255,255,255,.08)}
+  .lb-side .more{height:15px;min-width:20px;border-radius:8px;padding:0 6px;background:#23242a;color:#d6d7dd;font-size:9px;line-height:15px;margin-left:2px;text-align:center}
+  .lb-side .user,.lb-side .user strong,.lb-side .user small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* etat replie */
+  .lb-rail{width:44px;display:flex;justify-content:center;padding-top:8px}
+  .lb-rail button{width:32px;height:32px;border-radius:8px;background:linear-gradient(180deg,#1b1c21,#14151a);border:1px solid rgba(255,255,255,.13);color:#a9abb6;font-size:15px;font-weight:700;cursor:pointer;line-height:1}
 </style>
 </head>
 <body>
@@ -273,6 +327,98 @@ function TickerCard({ d }) {
   );
 }
 
+// ---- Leaderboard sidebar (donnees mock, porte de new/versus-leaderboard-clean) ----
+const LB_DATA = [
+  ["1","change","@change","blue","∞","+$1,912,048.27",["🥷","🐺","₿"],"8"],
+  ["2","frank","@frankdegods","photo","👩🏻","+$1,067,272.97",["🧑🏼","≡","🌙"],"3+"],
+  ["3","logjam","@_logjam","photo","🪵","+$943,134.90",["🌙","🐚","✌️"],"12+"],
+  ["4","PoorGoat","@PoorGoat_","dark","👹","+$800,062.61",["🐲","🌐","🟧"],"19+"],
+  ["5","Vee","@theveeman","dark","🗡️","+$626,839.09",["🐲","🕊","🌖"],"2+"],
+  ["6","DumbCrayonEater","@DumbCrayonEater","cyan","∞","+$617,239.05",["🐲","👻","🌙"],"18+"],
+  ["7","techquant","@techquant","photo","🐸","+$469,052.27",["🐲","≡","🟤"],""],
+  ["8","dark 🦄","@darkuwu","photo","🦄","+$454,282.35",["🦄","🛕"],"6"],
+  ["9","Pixel 🦄","@Pixel_","photo","😈","+$449,650.63",["🦄","🌀"],""],
+  ["10","remus 🐐🀄","@remusofmars","photo","🐶","+$446,965.88",["🌐","🌙","🔵"],"40+"],
+  ["11","lesabre","@lesabre","photo","🚗","+$416,841.70",["☣","🟩","≡"],"3+"],
+  ["12","mk4","@boosted","dark","♛","+$381,767.96",["🧿","☘"],"3"],
+  ["13","fibs","@fibs","photo","🤖","+$369,275.99",["🌜","🌊","🌐"],"32+"],
+  ["14","Pingu Charts","@pingucharts","photo","🐧","+$361,857.79",["👻","🌘","🏆"],"4+"],
+  ["15","smol intern 💡","@smol_intern","photo","🐱","+$355,709.00",["🌊","🌀","🌙"],"24+"],
+  ["16","Thokani 🕊","@Thokani","photo","🧸","+$353,632.09",["🌊","🌐","🦄"],""],
+  ["17","needledger","@needledger","green","∞","+$323,678.17",["🐲","🧑🏽","≡"],""],
+  ["18","surveillor","@surveillor","photo","🧙","+$303,212.49",["🐲","🌊","≡"],"2+"],
+];
+function LbMedal({ rank }) {
+  if (rank === "1") return <div className="medal"><span>1</span></div>;
+  if (rank === "2") return <div className="medal silver"><span>2</span></div>;
+  if (rank === "3") return <div className="medal bronze"><span>3</span></div>;
+  return <div className="place">{rank}.</div>;
+}
+function LbAvatar({ type, icon }) {
+  const cls = type === "blue" ? "blue" : type === "cyan" ? "cyan" : type === "green" ? "green" : "";
+  return <div className={"avatar " + cls}>{icon}</div>;
+}
+function LeaderboardSidebar({ collapsed, onToggle }) {
+  if (collapsed) {
+    return (
+      <div className="lb-rail">
+        <button onClick={onToggle} title="Ouvrir le menu">≫</button>
+      </div>
+    );
+  }
+  return (
+    <aside className="lb-side">
+      <section className="panel">
+        <header className="tabs">
+          <nav className="tab-nav">
+            <a className="tab alert" href="#"><span className="dot"></span><span className="bell">●</span> Alerts</a>
+            <a className="tab" href="#">Tokens</a>
+            <a className="tab active" href="#">Leaderboard</a>
+            <a className="tab" href="#">Feed</a>
+          </nav>
+          <button className="collapse" onClick={onToggle} title="Replier le menu">≪</button>
+        </header>
+        <div className="content">
+          <div className="filters">
+            <button>24H</button>
+            <button>7D</button>
+            <button>30D</button>
+            <button className="selected">ALL</button>
+          </div>
+          <div className="your-rank">
+            <div className="rank-avatar logo">∞</div>
+            <div>
+              <div className="muted">Your rank</div>
+              <div className="rankline"><span>#</span> -</div>
+            </div>
+            <div className="pnl-head">
+              <div>PnL</div>
+              <strong>--</strong>
+            </div>
+          </div>
+          <div className="dash"></div>
+          <div className="rows">
+            {LB_DATA.map(([rank, name, handle, type, icon, pnl, badges, more]) => (
+              <div className="row" key={rank}>
+                <LbMedal rank={rank} />
+                <LbAvatar type={type} icon={icon} />
+                <div className="user"><strong>{name}</strong><small>{handle}</small></div>
+                <div className="right">
+                  <div className="pnl">{pnl}</div>
+                  <div className="badges">
+                    {badges.map((b, i) => <span className="badge" key={i}>{b}</span>)}
+                    {more ? <span className="more">{more}</span> : null}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </aside>
+  );
+}
+
 function Versus() {
   const [groupTime, setGroupTime] = useState("1h");
   const [tickerTime, setTickerTime] = useState("12h");
@@ -280,6 +426,7 @@ function Versus() {
   const [tickers, setTickers] = useState([]);
   const [lbRows, setLbRows] = useState([]);
   const [sharedMap, setSharedMap] = useState({});
+  const [lbCollapsed, setLbCollapsed] = useState(false);
 
   // Charge le nombre de groupes par token (contract_address -> groups_count)
   useEffect(() => {
@@ -388,8 +535,11 @@ function Versus() {
           </div>
         </div>
 
-        <main className="flex-1 px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-8">
-          <div className="max-w-[clamp(960px,72vw,1400px)] mx-auto w-full">
+        <div className="flex-1 flex items-start gap-6 px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-8">
+          <div className="hidden lg:block flex-none sticky top-6 self-start">
+            <LeaderboardSidebar collapsed={lbCollapsed} onToggle={() => setLbCollapsed(v => !v)} />
+          </div>
+          <main className="flex-1 min-w-0">
           <section id="groups">
             <div className="flex items-start justify-between">
               <div>
@@ -439,8 +589,8 @@ function Versus() {
               <a href="/ticker" className="rounded-xl bg-zinc-900 ring-1 ring-white/10 px-5 py-2.5 text-sm font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">Explore all</a>
             </div>
           </section>
-          </div>
-        </main>
+          </main>
+        </div>
 
         <footer className="px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-8">
           <div className="w-full flex flex-col md:flex-row gap-4 md:items-end md:justify-between text-xs text-zinc-500">
