@@ -34,13 +34,17 @@
   .rtj-btn:active{transform:translateY(0);box-shadow:0 4px 14px -10px rgba(255,255,255,0.3)}
 
   /* ---- Leaderboard sidebar (porte de new/versus-leaderboard-clean) ---- */
-  .lb-side{--lb-green:#00f078;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#f3f4f6}
+  .lb-fixed{position:fixed;left:0;top:0;bottom:0;z-index:40}
+  .lb-side{--lb-green:#00f078;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#f3f4f6;height:100%}
   .lb-side .panel{
-    width:300px;border-radius:9px;overflow:hidden;
+    width:300px;height:100%;display:flex;flex-direction:column;overflow:hidden;
+    border-radius:0 9px 9px 0;
     background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.004) 34%),#0d0e12;
-    border:1px solid rgba(166,174,190,.35);
+    border:1px solid rgba(166,174,190,.35);border-left:0;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 16px 45px rgba(0,0,0,.48);
   }
+  .lb-side .tabs{flex:none}
+  .lb-side .content{flex:1;min-height:0;display:flex;flex-direction:column}
   .lb-side .tabs{height:40px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#1b1c21 0%,#14151a 100%);border-bottom:1px solid rgba(255,255,255,.13)}
   .lb-side .tab-nav{flex:1;display:flex;align-items:center;justify-content:space-between;padding-right:8px}
   .lb-side .tab{position:relative;color:#b9bbc5;text-decoration:none;font-size:12px;font-weight:500;line-height:40px}
@@ -62,8 +66,13 @@
   .lb-side .rankline span{color:#2d70ff;font-size:17px;margin-right:3px}
   .lb-side .pnl-head{text-align:right;color:#b8bac4;font-size:13px}
   .lb-side .pnl-head strong{display:block;margin-top:4px;font-size:16px;color:#a9abb6}
-  .lb-side .dash{border-top:1px dashed rgba(255,255,255,.13);margin:9px 0 0}
-  .lb-side .rows{padding-top:0}
+  .lb-side .dash{border-top:1px dashed rgba(255,255,255,.13);margin:9px 0 0;flex:none}
+  .lb-side .rows{flex:1;min-height:0;overflow-y:auto;padding-top:0;margin-right:-6px;padding-right:6px}
+  .lb-side .rows::-webkit-scrollbar{width:8px}
+  .lb-side .rows::-webkit-scrollbar-track{background:transparent}
+  .lb-side .rows::-webkit-scrollbar-thumb{background:#2a2c33;border-radius:6px}
+  .lb-side .rows::-webkit-scrollbar-thumb:hover{background:#3a3d46}
+  .lb-side .rows{scrollbar-width:thin;scrollbar-color:#2a2c33 transparent}
   .lb-side .row{height:48px;display:grid;grid-template-columns:34px 40px 1fr auto;align-items:center;column-gap:8px;border-bottom:1px solid rgba(255,255,255,.045)}
   .lb-side .place{width:30px;text-align:center;color:#c5c7d1;font-size:13px;font-weight:500}
   .lb-side .medal{width:18px;height:22px;margin:0 auto;position:relative;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#151515}
@@ -84,7 +93,7 @@
   .lb-side .more{height:15px;min-width:20px;border-radius:8px;padding:0 6px;background:#23242a;color:#d6d7dd;font-size:9px;line-height:15px;margin-left:2px;text-align:center}
   .lb-side .user,.lb-side .user strong,.lb-side .user small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* etat replie */
-  .lb-rail{width:44px;display:flex;justify-content:center;padding-top:8px}
+  .lb-rail{width:44px;height:100%;display:flex;justify-content:center;padding-top:12px;background:linear-gradient(180deg,#14151a,#0d0e12);border-right:1px solid rgba(166,174,190,.35)}
   .lb-rail button{width:32px;height:32px;border-radius:8px;background:linear-gradient(180deg,#1b1c21,#14151a);border:1px solid rgba(255,255,255,.13);color:#a9abb6;font-size:15px;font-weight:700;cursor:pointer;line-height:1}
 </style>
 </head>
@@ -427,6 +436,14 @@ function Versus() {
   const [lbRows, setLbRows] = useState([]);
   const [sharedMap, setSharedMap] = useState({});
   const [lbCollapsed, setLbCollapsed] = useState(false);
+  const [lbLg, setLbLg] = useState(typeof window !== "undefined" && window.matchMedia("(min-width:1024px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width:1024px)");
+    const on = () => setLbLg(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  const lbPad = lbLg ? (lbCollapsed ? 44 : 300) : 0;
 
   // Charge le nombre de groupes par token (contract_address -> groups_count)
   useEffect(() => {
@@ -496,7 +513,10 @@ function Versus() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
-      <div className="flex flex-col flex-1 bg-[#0b0b0c]">
+      <div className="hidden lg:block lb-fixed">
+        <LeaderboardSidebar collapsed={lbCollapsed} onToggle={() => setLbCollapsed(v => !v)} />
+      </div>
+      <div className="flex flex-col flex-1 bg-[#0b0b0c] transition-[padding] duration-200" style={{ paddingLeft: lbPad }}>
         <header className="px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-5">
           <div className="w-full flex items-center gap-6">
           <span style={{ fontFamily: "Arial, Helvetica, sans-serif" }} className="text-2xl font-semibold tracking-[0.15em] italic select-none text-zinc-300">VERSUS</span>
@@ -535,11 +555,7 @@ function Versus() {
           </div>
         </div>
 
-        <div className="flex-1 flex items-start gap-6 px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-8">
-          <div className="hidden lg:block flex-none sticky top-6 self-start">
-            <LeaderboardSidebar collapsed={lbCollapsed} onToggle={() => setLbCollapsed(v => !v)} />
-          </div>
-          <main className="flex-1 min-w-0">
+        <main className="flex-1 px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-8">
           <section id="groups">
             <div className="flex items-start justify-between">
               <div>
@@ -589,8 +605,7 @@ function Versus() {
               <a href="/ticker" className="rounded-xl bg-zinc-900 ring-1 ring-white/10 px-5 py-2.5 text-sm font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">Explore all</a>
             </div>
           </section>
-          </main>
-        </div>
+        </main>
 
         <footer className="px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-8">
           <div className="w-full flex flex-col md:flex-row gap-4 md:items-end md:justify-between text-xs text-zinc-500">
