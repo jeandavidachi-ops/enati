@@ -9,15 +9,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script>
   tailwind.config = { theme: { extend: { fontFamily: {
-    sans: ['Arial','Helvetica','sans-serif'],
-    mono: ['ui-monospace','SFMono-Regular','Menlo','Monaco','Consolas','Liberation Mono','Courier New','monospace']
+    sans: ['Geist Pixel','-apple-system','BlinkMacSystemFont','Segoe UI','Roboto','Helvetica','Arial','sans-serif'],
+    mono: ['Geist Pixel','-apple-system','BlinkMacSystemFont','Segoe UI','Roboto','Helvetica','Arial','sans-serif']
   } } } };
 </script>
 <style>
-  body{margin:0;background:#0b0b0c;font-family:Arial,Helvetica,sans-serif}
+  @font-face{font-family:'Geist Pixel';src:url('https://cdn.jsdelivr.net/npm/geist@1.7.2/dist/fonts/geist-pixel/GeistPixel-Square.woff2') format('woff2');font-weight:100 900;font-display:swap;}
+  body{margin:0;background:#0b0b0c;font-family:'Geist Pixel',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
   html{scrollbar-color:#27272a #0b0b0c;scrollbar-width:thin}
   ::-webkit-scrollbar{width:10px;height:10px}
   ::-webkit-scrollbar-track{background:#0b0b0c}
@@ -175,7 +176,7 @@ function Podium({ d, rank }) {
   );
 }
 const TABLE_COLS = "70px minmax(190px,2.1fr) 1fr 1.2fr 1.45fr 1.05fr 0.95fr 96px";
-const MONO = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+const MONO = "'Geist Pixel', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 const THS = { fontFamily: MONO, fontSize: "clamp(12px,0.85vw,15px)", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap", color: "#797d84" };
 const VAL = { fontFamily: MONO, fontWeight: 500, fontSize: "clamp(16px,1.05vw,20px)", fontVariantNumeric: "tabular-nums" };
 function Th({ children, className = "" }) {
