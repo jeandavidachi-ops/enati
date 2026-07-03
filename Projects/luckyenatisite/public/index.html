@@ -533,7 +533,7 @@ function Versus() {
         <LeaderboardSidebar collapsed={lbCollapsed} onToggle={() => setLbCollapsed(v => !v)} />
       </div>
       <div className="flex flex-col flex-1 bg-[#0b0b0c]">
-        <div ref={lbTopRef}>
+        <div ref={lbTopRef} className="sticky top-0 z-50 bg-[#0b0b0c]">
         <header className="px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-5">
           <div className="w-full flex items-center gap-6">
           <span style={{ fontFamily: "Arial, Helvetica, sans-serif" }} className="text-2xl font-semibold tracking-[0.15em] italic select-none text-zinc-300">VERSUS</span>
