@@ -123,7 +123,7 @@ function BlocksThumb({ src, g, e }) {
     </div>
   );
 }
-function BlocksCard({ image, name, stats, g, e, href, time }) {
+function BlocksCard({ image, name, stats, g, e, href, time, join }) {
   const Tag = href ? "a" : "article";
   return (
     <Tag {...(href ? { href } : {})}
@@ -158,12 +158,14 @@ function BlocksCard({ image, name, stats, g, e, href, time }) {
               <XIcon className="w-[clamp(15px,1vw,18px)] h-[clamp(15px,1vw,18px)] hover:text-white cursor-pointer" />
               <TelegramIcon className="w-[clamp(16px,1.05vw,19px)] h-[clamp(16px,1.05vw,19px)] hover:text-white cursor-pointer" />
             </nav>
+            {join ? (
             <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
               style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
               className="rtj-btn flex items-center gap-1.5 rounded-[8px] bg-[#f5f5f5] text-black font-semibold px-3.5 py-1.5 text-[clamp(11px,0.8vw,13px)] whitespace-nowrap">
               Request to Join
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -312,7 +314,7 @@ function App() {
             <div className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-6">
               {TYPE === "group"
                 ? pageItems.map((d, i) => (
-                    <BlocksCard key={start + i} image={d.img} name={d.name} g={d.g} e={d.e}
+                    <BlocksCard key={start + i} image={d.img} name={d.name} g={d.g} e={d.e} join
                       href={d.id ? ("/group/" + d.id) : null}
                       stats={[
                         { label: "PnL", value: d.win + "%", positive: true },
