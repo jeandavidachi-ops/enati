@@ -26,6 +26,12 @@
   ::-webkit-scrollbar-thumb:hover{background:#3f3f46}
   .no-scrollbar::-webkit-scrollbar{display:none}
   .no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+  @keyframes rtj-arrow-idle{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
+  .rtj-btn{transition:background .22s cubic-bezier(.4,0,.2,1),transform .22s cubic-bezier(.4,0,.2,1),box-shadow .22s cubic-bezier(.4,0,.2,1);box-shadow:0 6px 20px -10px rgba(255,255,255,0.25)}
+  .rtj-btn svg{transition:transform .24s cubic-bezier(.4,0,.2,1);animation:rtj-arrow-idle 2.6s ease-in-out infinite}
+  .rtj-btn:hover{background:#ffffff;transform:translateY(-2px);box-shadow:0 12px 30px -10px rgba(255,255,255,0.4)}
+  .rtj-btn:hover svg{transform:translateX(5px);animation:none}
+  .rtj-btn:active{transform:translateY(0);box-shadow:0 4px 14px -10px rgba(255,255,255,0.3)}
 </style>
 </head>
 <body>
@@ -154,9 +160,9 @@ function BlocksCard({ image, name, stats, g, e, href, time }) {
             </nav>
             <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
               style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
-              className="flex items-center gap-1.5 rounded-full bg-white text-black font-semibold px-3.5 py-1.5 text-[clamp(11px,0.8vw,13px)] whitespace-nowrap hover:bg-zinc-200 transition-colors">
+              className="rtj-btn flex items-center gap-1.5 rounded-[11px] bg-[#f5f5f5] text-black font-semibold px-3.5 py-1.5 text-[clamp(11px,0.8vw,13px)] whitespace-nowrap">
               Request to Join
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </button>
           </div>
         </div>
