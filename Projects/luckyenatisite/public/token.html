@@ -176,6 +176,39 @@ function GroupsTable({ groups }) {
 
 const TIMEFRAMES = ["1H", "4H", "1D", "1W", "1M", "All"];
 
+// Chart TradingView via le widget Moralis (aucun branding DexScreener, pas de cle API).
+const CHAIN_IDS = { solana:"solana", eth:"0x1", ethereum:"0x1", base:"0x2105",
+  bsc:"0x38", binance:"0x38", bnb:"0x38", polygon:"0x89", matic:"0x89",
+  arbitrum:"0xa4b1", avalanche:"0xa86a", avax:"0xa86a", optimism:"0xa" };
+
+function TVChart({ chain, address, height = 340 }) {
+  const done = React.useRef(false);
+  React.useEffect(() => {
+    if (!address || done.current) return;
+    const c = (chain || "").toLowerCase();
+    // Fallback Solana : les tokens pump.fun (adresse en "pump") et les cas sans chain connue.
+    const chainId = CHAIN_IDS[c] || (c ? chain : "solana");
+    if (!chainId) return;
+    done.current = true;
+    const init = () => window.createMyWidget && window.createMyWidget("price-chart-widget-container", {
+      width: "100%", height: height + "px",
+      chainId, tokenAddress: address, defaultInterval: "1D",
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Etc/UTC",
+      theme: "moralis", locale: "en",
+      backgroundColor: "#0c0d0f", gridColor: "#16181c", textColor: "#68738D",
+      candleUpColor: "#3fd35f", candleDownColor: "#f87171",
+      hideLeftToolbar: true, hideTopToolbar: true, hideBottomToolbar: true,
+    });
+    if (document.getElementById("moralis-chart-widget")) { init(); return; }
+    const s = document.createElement("script");
+    s.id = "moralis-chart-widget";
+    s.src = "https://moralis.com/static/embed/chart.js";
+    s.async = true; s.onload = init;
+    document.body.appendChild(s);
+  }, [chain, address, height]);
+  return <div id="price-chart-widget-container" style={{ height, width: "100%" }} />;
+}
+
 function App() {
   const [data, setData] = useState(null);
   const [notFound, setNotFound] = useState(false);
@@ -193,11 +226,6 @@ function App() {
   const token = data && data.token;
   const m = (data && data.metrics) || {};
   const shortAddr = address ? (address.slice(0, 6) + "…" + address.slice(-4)) : "";
-  // On embed via l'adresse du token quand la chain est connue : DexScreener choisit
-  // lui-meme la paire canonique (evite de tomber sur une paire anormale). Fallback pair.
-  const chartUrl = token && token.chain
-    ? `https://dexscreener.com/${token.chain}/${encodeURIComponent(address)}?embed=1&theme=dark&info=0&trades=0`
-    : (token && token.pair_address ? `https://dexscreener.com/${token.chain}/${token.pair_address}?embed=1&theme=dark` : null);
 
   const changeColor = m.change_24h == null ? "#F5F5F5" : (m.change_24h >= 0 ? "#3fd35f" : "#f87171");
   const changeVal = m.change_24h == null ? "—" : (m.change_24h >= 0 ? "+" : "") + m.change_24h.toFixed(2) + "%";
@@ -245,7 +273,7 @@ function App() {
                 <Metric label="All Time High" value="—" sub="n/a" />
               </div>
 
-              {/* Chart (DexScreener embed) */}
+              {/* Chart (TradingView via Moralis widget) */}
               <div className="mt-6 rounded-2xl bg-[#0c0d0f] border border-white/[0.08] overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
                   <span style={{ fontFamily: MONO }} className="text-sm font-semibold text-[#ededf0]">Chart</span>
@@ -255,12 +283,11 @@ function App() {
                     ))}
                   </div>
                 </div>
-                {chartUrl ? (
-                  <iframe src={chartUrl} loading="lazy" title="DexScreener chart"
-                    style={{ width: "100%", height: "clamp(560px,85vh,960px)", border: 0, display: "block" }} />
+                {token ? (
+                  <TVChart chain={token.chain} address={address} height={340} />
                 ) : (
                   <div className="flex items-center justify-center text-zinc-500 text-sm"
-                       style={{ height: "clamp(560px,85vh,960px)" }}>Chart unavailable for this token.</div>
+                       style={{ height: 340 }}>Loading chart…</div>
                 )}
               </div>
 
