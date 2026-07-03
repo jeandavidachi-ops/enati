@@ -388,6 +388,7 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [] }) {
                 <LbMedal rank={String(i + 1)} />
                 <Avatar src={row.img} g={row.g} e={row.e} className="avatar" />
                 <div className="user"><strong>{row.name}</strong></div>
+                <div className="right"><div className="pnl">{row.win}%</div></div>
               </div>
             ))}
           </div>
