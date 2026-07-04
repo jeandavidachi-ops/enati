@@ -339,7 +339,8 @@ function App() {
     const REF = 2000; // largeur "grand ecran" de reference
     const applyZoom = () => {
       const w = window.innerWidth;
-      const z = (w >= 1024 && w < REF) ? (w / REF) : 1;
+      const base = (w >= 1024 && w < REF) ? (w / REF) : 1;
+      const z = base * 0.9; // leger zoom-out global facon navigateur a 90%
       document.documentElement.style.zoom = String(z);
     };
     applyZoom();
@@ -370,9 +371,6 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
-      <div className="hidden lg:block lb-fixed" style={{ top: lbTop }}>
-        <LeaderboardSidebar collapsed={lbCollapsed} onToggle={() => setLbCollapsed(v => !v)} rows={rows} />
-      </div>
       <div className="flex flex-col flex-1 bg-[#0b0b0c]">
         <div ref={lbTopRef} className="sticky top-0 z-50 bg-[#0b0b0c]">
         <header className="pl-6 pr-4 sm:pr-6 lg:pr-10 xl:pr-16 2xl:pr-24 py-5">
