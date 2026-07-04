@@ -167,6 +167,30 @@ def auth_me():
     return jsonify({'user': _public_user(_current_user())})
 
 
+_tg_config_cache = None  # {'bot_id':..., 'bot_username':...}
+
+
+@app.route('/api/auth/config', methods=['GET'])
+def auth_config():
+    """Expose les infos publiques du bot (id + username) pour le Login Widget.
+    Le BOT_TOKEN reste secret cote serveur ; seul l'id/username (publics) sortent."""
+    global _tg_config_cache
+    if not BOT_TOKEN:
+        return jsonify({'telegram': None})
+    if _tg_config_cache is None:
+        bot_id = BOT_TOKEN.split(':')[0]
+        bot_username = None
+        try:
+            r = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/getMe', timeout=6)
+            j = r.json()
+            if j.get('ok'):
+                bot_username = j['result'].get('username')
+        except Exception as e:
+            logger.warning(f"getMe failed: {e}")
+        _tg_config_cache = {'bot_id': bot_id, 'bot_username': bot_username}
+    return jsonify({'telegram': _tg_config_cache})
+
+
 @app.route('/api/auth/telegram', methods=['POST'])
 def auth_telegram():
     user = _current_user()

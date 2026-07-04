@@ -211,24 +211,47 @@ function VsSignupModal({ onClose, onSwitch, onAuthed }) {
   );
 }
 
+// Charge le script du widget Telegram une seule fois pour toute la page.
+function vsLoadTelegramWidget() {
+  if (window.__vsTgWidgetLoading) return window.__vsTgWidgetLoading;
+  window.__vsTgWidgetLoading = new Promise((resolve) => {
+    if (window.Telegram && window.Telegram.Login) return resolve();
+    const s = document.createElement("script");
+    s.async = true;
+    s.src = "https://telegram.org/js/telegram-widget.js?22";
+    s.onload = () => resolve();
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
+  return window.__vsTgWidgetLoading;
+}
+
 function VsTelegramButton({ onConnected }) {
   const [busy, setBusy] = vsUseState(false);
+  const [cfg, setCfg] = vsUseState(null);
+  vsUseEffect(() => {
+    vsLoadTelegramWidget();
+    fetch("/api/auth/config").then((r) => r.json())
+      .then((d) => { if (d.telegram && d.telegram.bot_id) setCfg(d.telegram); })
+      .catch(() => {});
+  }, []);
+  async function finish(payload) {
+    try {
+      const r = await fetch("/api/auth/telegram", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const data = await r.json();
+      if (r.ok) onConnected(data.user);
+      else alert((data && data.error) || "Telegram link failed.");
+    } catch { alert("Network error."); }
+    setBusy(false);
+  }
   async function connect() {
-    setBusy(true);
-    const finish = async (payload) => {
-      try {
-        const r = await fetch("/api/auth/telegram", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-        const data = await r.json();
-        if (r.ok) onConnected(data.user);
-      } catch {}
-      setBusy(false);
-    };
-    if (window.TG_BOT_ID && window.Telegram && window.Telegram.Login) {
-      window.Telegram.Login.auth({ bot_id: window.TG_BOT_ID, request_access: true }, (user) => { if (user) finish(user); else setBusy(false); });
+    await vsLoadTelegramWidget();
+    if (cfg && cfg.bot_id && window.Telegram && window.Telegram.Login) {
+      setBusy(true);
+      window.Telegram.Login.auth({ bot_id: cfg.bot_id, request_access: true },
+        (user) => { if (user) finish(user); else setBusy(false); });
     } else {
-      const username = window.prompt("Enter your Telegram @username to link your account:");
-      if (!username) { setBusy(false); return; }
-      finish({ username: username.replace(/^@/, ""), first_name: username.replace(/^@/, "") });
+      alert("Connexion Telegram indisponible : le bot n'est pas configuré (BOT_TOKEN + domaine dans BotFather).");
     }
   }
   return (
