@@ -339,8 +339,7 @@ function App() {
     const REF = 2000; // largeur "grand ecran" de reference
     const applyZoom = () => {
       const w = window.innerWidth;
-      const base = (w >= 1024 && w < REF) ? (w / REF) : 1;
-      const z = base * 0.9; // leger zoom-out global facon navigateur a 90%
+      const z = (w >= 1024 && w < REF) ? 0.51 : 1;
       document.documentElement.style.zoom = String(z);
     };
     applyZoom();
