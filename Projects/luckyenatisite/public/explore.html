@@ -9,7 +9,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Kanit:ital,wght@1,900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <script>
   tailwind.config = { theme: { extend: { fontFamily: {
     sans: ['Geist Pixel','-apple-system','BlinkMacSystemFont','Segoe UI','Roboto','Helvetica','Arial','sans-serif'],
@@ -36,6 +38,7 @@
 </head>
 <body>
 <div id="root"></div>
+<script type="text/babel" src="/js/versus-auth.js"></script>
 <script type="text/babel">
 const { useState, useEffect } = React;
 
@@ -294,10 +297,7 @@ function App() {
               <span className="text-xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 ring-1 ring-white/10">/</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="text-sm px-4 py-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition">Sign In</button>
-            <button className="text-sm px-4 py-2 rounded-full bg-white text-black font-semibold hover:bg-zinc-200 transition">Sign Up</button>
-          </div>
+          <AuthCorner />
           </div>
         </header>
 
