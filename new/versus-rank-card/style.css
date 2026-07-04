@@ -1,0 +1,238 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #050607;
+  color: #fff;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 48px 24px;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.045), transparent 26%),
+    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.025), transparent 28%),
+    #050607;
+}
+
+.rank-card-wrap {
+  width: min(100%, 920px);
+}
+
+.rank-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  margin-bottom: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #cfd1d6;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 18px;
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.06);
+}
+
+.rank-pill .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
+}
+
+.rank-pill b {
+  color: white;
+}
+
+.rank-pill em {
+  opacity: 0.65;
+  font-style: normal;
+}
+
+.rank-card {
+  width: 100%;
+  min-height: 210px;
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  padding: 38px 42px;
+  border-radius: 36px;
+  border: 1.5px solid rgba(255, 255, 255, 0.38);
+  color: white;
+  background:
+    radial-gradient(circle at left, rgba(255, 255, 255, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015));
+  box-shadow:
+    0 0 32px rgba(255, 255, 255, 0.10),
+    inset 0 0 32px rgba(255, 255, 255, 0.025);
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.rank-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 0 42px rgba(255, 255, 255, 0.18),
+    inset 0 0 40px rgba(255, 255, 255, 0.04);
+}
+
+.rank-card:active {
+  transform: translateY(0) scale(0.995);
+}
+
+.avatar {
+  width: 128px;
+  height: 128px;
+  flex: 0 0 128px;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at center, #1d3e91, #071024 75%);
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.25);
+}
+
+.avatar-head {
+  position: absolute;
+  top: 24px;
+  left: 31px;
+  width: 66px;
+  height: 52px;
+  background: linear-gradient(#3d6cff, #1944cc);
+  border-radius: 16px 16px 4px 4px;
+}
+
+.avatar-body {
+  position: absolute;
+  bottom: -18px;
+  left: 34px;
+  width: 76px;
+  height: 76px;
+  background: #d8bd8f;
+  border-radius: 50%;
+}
+
+.content {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+}
+
+.content h3 {
+  margin: 0 0 26px;
+  font-size: clamp(34px, 5vw, 52px);
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+}
+
+.stat {
+  min-width: 90px;
+}
+
+.stat strong {
+  display: block;
+  font-size: 40px;
+  line-height: 0.9;
+  font-weight: 900;
+}
+
+.stat p {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.blue { color: #4ea1ff; }
+.green { color: #37e44f; }
+.red { color: #ff4f72; }
+
+.line {
+  width: 1px;
+  height: 58px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.arrow {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  color: white;
+  font-size: 44px;
+  line-height: 1;
+  box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.04);
+}
+
+@media (max-width: 760px) {
+  .rank-card {
+    align-items: flex-start;
+    gap: 22px;
+    padding: 28px;
+  }
+
+  .avatar {
+    width: 92px;
+    height: 92px;
+    flex-basis: 92px;
+  }
+
+  .avatar-head {
+    top: 17px;
+    left: 22px;
+    width: 48px;
+    height: 38px;
+  }
+
+  .avatar-body {
+    left: 24px;
+    width: 55px;
+    height: 55px;
+  }
+
+  .stats {
+    gap: 16px;
+  }
+
+  .stat {
+    min-width: 60px;
+  }
+
+  .stat strong {
+    font-size: 30px;
+  }
+
+  .stat p {
+    font-size: 15px;
+  }
+
+  .arrow {
+    width: 52px;
+    height: 52px;
+    flex-basis: 52px;
+    font-size: 32px;
+  }
+}
