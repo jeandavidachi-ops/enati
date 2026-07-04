@@ -398,6 +398,12 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [] }) {
         )}
         {tab === "tokens" && (
         <div className="content">
+          <div className="filters">
+            <button>24H</button>
+            <button>7D</button>
+            <button>30D</button>
+            <button className="selected">ALL</button>
+          </div>
           <div className="rows">
             {tokens.map((t, i) => (
               <a className="row" key={i} href={t.addr ? ("/ticker/" + encodeURIComponent(t.addr)) : "#"}>
