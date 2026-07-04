@@ -2,8 +2,12 @@ import os
 from pathlib import Path
 
 import time
+import secrets
+import hashlib
+import hmac
 
-from flask import Flask, jsonify, request, Response, abort
+from flask import Flask, jsonify, request, Response, abort, make_response
+from werkzeug.security import generate_password_hash, check_password_hash
 from pymongo import MongoClient
 from datetime import datetime, timedelta
 import logging
@@ -62,6 +66,134 @@ users_collection = db['coins']
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 _group_photo_cache = {}          # group_id -> (bytes, content_type, timestamp)
 GROUP_PHOTO_TTL = 3600           # 1h
+
+
+# =====================================================================
+#  Authentification (inscription / connexion / Telegram)
+#  Stockage dans MongoDB : app_users + app_sessions (persistant).
+# =====================================================================
+app_users = db['app_users']
+app_sessions = db['app_sessions']
+try:
+    app_users.create_index('email', unique=True)
+    app_sessions.create_index('token', unique=True)
+except Exception as _e:
+    logger.warning(f"Auth index setup: {_e}")
+
+AUTH_COOKIE = 'vs_session'
+SESSION_MAX_AGE = 60 * 60 * 24 * 30  # 30 jours
+
+
+def _public_user(u):
+    if not u:
+        return None
+    return {
+        'id': u.get('id'),
+        'email': u.get('email'),
+        'name': u.get('name'),
+        'telegram': u.get('telegram'),
+    }
+
+
+def _current_user():
+    token = request.cookies.get(AUTH_COOKIE)
+    if not token:
+        return None
+    sess = app_sessions.find_one({'token': token})
+    if not sess:
+        return None
+    return app_users.find_one({'id': sess['user_id']})
+
+
+def _new_session(resp, user_id):
+    token = secrets.token_hex(24)
+    app_sessions.insert_one({'token': token, 'user_id': user_id, 'created_at': time.time()})
+    resp.set_cookie(AUTH_COOKIE, token, max_age=SESSION_MAX_AGE,
+                    httponly=True, samesite='Lax', path='/')
+    return resp
+
+
+@app.route('/api/auth/signup', methods=['POST'])
+def auth_signup():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or ''
+    name = (data.get('name') or '').strip()
+    if not email or not password:
+        return jsonify({'error': 'Email and password required.'}), 400
+    if len(password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters.'}), 400
+    if app_users.find_one({'email': email}):
+        return jsonify({'error': 'An account with this email already exists.'}), 409
+    user = {
+        'id': secrets.token_hex(16),
+        'email': email,
+        'name': name or email.split('@')[0],
+        'password': generate_password_hash(password),
+        'telegram': None,
+        'created_at': time.time(),
+    }
+    app_users.insert_one(user)
+    resp = make_response(jsonify({'user': _public_user(user)}))
+    return _new_session(resp, user['id'])
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def auth_login():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or ''
+    if not email or not password:
+        return jsonify({'error': 'Email and password required.'}), 400
+    user = app_users.find_one({'email': email})
+    if not user or not check_password_hash(user.get('password', ''), password):
+        return jsonify({'error': 'Invalid email or password.'}), 401
+    resp = make_response(jsonify({'user': _public_user(user)}))
+    return _new_session(resp, user['id'])
+
+
+@app.route('/api/auth/logout', methods=['POST'])
+def auth_logout():
+    token = request.cookies.get(AUTH_COOKIE)
+    if token:
+        app_sessions.delete_one({'token': token})
+    resp = make_response(jsonify({'ok': True}))
+    resp.set_cookie(AUTH_COOKIE, '', max_age=0, httponly=True, samesite='Lax', path='/')
+    return resp
+
+
+@app.route('/api/auth/me', methods=['GET'])
+def auth_me():
+    return jsonify({'user': _public_user(_current_user())})
+
+
+@app.route('/api/auth/telegram', methods=['POST'])
+def auth_telegram():
+    user = _current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated.'}), 401
+    data = request.get_json(silent=True) or {}
+
+    # Verifie la signature du Telegram Login Widget quand un bot token est configure.
+    if BOT_TOKEN and data.get('hash'):
+        secret = hashlib.sha256(BOT_TOKEN.encode()).digest()
+        check_string = '\n'.join(
+            f"{k}={data[k]}" for k in sorted(data) if k != 'hash'
+        )
+        expected = hmac.new(secret, check_string.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, data['hash']):
+            return jsonify({'error': 'Invalid Telegram signature.'}), 403
+
+    tg = {
+        'id': data.get('id'),
+        'username': data.get('username'),
+        'firstName': data.get('first_name'),
+        'photoUrl': data.get('photo_url'),
+        'linkedAt': time.time(),
+    }
+    app_users.update_one({'id': user['id']}, {'$set': {'telegram': tg}})
+    user = app_users.find_one({'id': user['id']})
+    return jsonify({'user': _public_user(user)})
 
 
 @app.route('/api/group-photo/<group_id>', methods=['GET'])
