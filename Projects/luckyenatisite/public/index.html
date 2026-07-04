@@ -343,7 +343,8 @@ function LbMedal({ rank }) {
   if (rank === "3") return <div className="medal bronze"><span>3</span></div>;
   return <div className="place">{rank}.</div>;
 }
-function LeaderboardSidebar({ collapsed, onToggle, rows = [] }) {
+function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [] }) {
+  const [tab, setTab] = useState("leaderboard");
   if (collapsed) {
     return (
       <div className="lb-rail">
@@ -356,13 +357,14 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [] }) {
       <section className="panel">
         <header className="tabs">
           <nav className="tab-nav">
-            <a className="tab alert" href="#"><span className="dot"></span><span className="bell">●</span> Alerts</a>
-            <a className="tab" href="#">Tokens</a>
-            <a className="tab active" href="#">Leaderboard</a>
-            <a className="tab" href="#">Feed</a>
+            <a className={"tab alert" + (tab === "alerts" ? " active" : "")} href="#" onClick={(e) => { e.preventDefault(); setTab("alerts"); }}><span className="dot"></span><span className="bell">●</span> Alerts</a>
+            <a className={"tab" + (tab === "tokens" ? " active" : "")} href="#" onClick={(e) => { e.preventDefault(); setTab("tokens"); }}>Tokens</a>
+            <a className={"tab" + (tab === "leaderboard" ? " active" : "")} href="#" onClick={(e) => { e.preventDefault(); setTab("leaderboard"); }}>Leaderboard</a>
+            <a className={"tab" + (tab === "feed" ? " active" : "")} href="#" onClick={(e) => { e.preventDefault(); setTab("feed"); }}>Feed</a>
           </nav>
           <button className="collapse" onClick={onToggle} title="Replier le menu">≪</button>
         </header>
+        {tab === "leaderboard" && (
         <div className="content">
           <div className="filters">
             <button>24H</button>
@@ -393,6 +395,32 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [] }) {
             ))}
           </div>
         </div>
+        )}
+        {tab === "tokens" && (
+        <div className="content">
+          <div className="rows">
+            {tokens.map((t, i) => (
+              <a className="row" key={i} href={t.addr ? ("/ticker/" + encodeURIComponent(t.addr)) : "#"}>
+                <LbMedal rank={String(i + 1)} />
+                <Avatar src={t.img} g={t.g} e={t.e} className="avatar" />
+                <div className="user"><strong>{t.sym}</strong></div>
+                <div className="right"><div className="pnl">{t.mult}x</div></div>
+              </a>
+            ))}
+            {tokens.length === 0 && <div className="muted" style={{ padding: "12px 14px" }}>No tokens yet.</div>}
+          </div>
+        </div>
+        )}
+        {tab === "alerts" && (
+        <div className="content">
+          <div className="muted" style={{ padding: "12px 14px" }}>No alerts yet.</div>
+        </div>
+        )}
+        {tab === "feed" && (
+        <div className="content">
+          <div className="muted" style={{ padding: "12px 14px" }}>No feed yet.</div>
+        </div>
+        )}
       </section>
     </aside>
   );
@@ -514,7 +542,7 @@ function Versus() {
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
       <div className="hidden lg:block lb-fixed" style={{ top: lbTop }}>
-        <LeaderboardSidebar collapsed={lbCollapsed} onToggle={() => setLbCollapsed(v => !v)} rows={lbRows} />
+        <LeaderboardSidebar collapsed={lbCollapsed} onToggle={() => setLbCollapsed(v => !v)} rows={lbRows} tokens={tickers} />
       </div>
       <div className="flex flex-col flex-1 bg-[#0b0b0c]">
         <div ref={lbTopRef} className="sticky top-0 z-50 bg-[#0b0b0c]">
