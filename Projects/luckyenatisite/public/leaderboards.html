@@ -343,7 +343,7 @@ function App() {
     const REF = 2000; // largeur "grand ecran" de reference
     const applyZoom = () => {
       const w = window.innerWidth;
-      const z = (w >= REF) ? 0.7 : (w >= 1024 ? 0.64 : 1);
+      const z = (w >= REF) ? 0.8 : (w >= 1024 ? 0.64 : 1);
       document.documentElement.style.zoom = String(z);
     };
     applyZoom();
