@@ -96,6 +96,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel" src="/js/versus-auth.js"></script>
+<script type="text/babel" src="/js/versus-search.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
@@ -404,10 +405,7 @@ function App() {
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4">
               <h1 className="text-3xl font-bold">Leaderboard</h1>
-              <div className="flex items-center gap-2 rounded-xl bg-zinc-900 ring-1 ring-white/10 px-3 py-1.5 text-zinc-400">
-                <SearchIcon className="w-4 h-4" />
-                <input placeholder="Search" className="bg-transparent outline-none text-sm w-32 placeholder-zinc-500" />
-              </div>
+              <div className="w-56"><VsSearch placeholder="Search" /></div>
             </div>
             <TimeTabs />
           </div>

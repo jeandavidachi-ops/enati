@@ -33,6 +33,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel" src="/js/versus-auth.js"></script>
+<script type="text/babel" src="/js/versus-search.js"></script>
 <script type="text/babel">
 const { useState, useEffect } = React;
 
@@ -108,10 +109,7 @@ function Header() {
           </span>
         </nav>
         <div className="flex-1 max-w-xl mx-auto hidden sm:block">
-          <div className="flex items-center gap-2 rounded-xl bg-zinc-900 ring-1 ring-white/10 px-3 py-2 text-zinc-400">
-            <SearchIcon className="w-4 h-4" />
-            <input placeholder="Search groups or tickers" className="bg-transparent outline-none text-sm flex-1 placeholder-zinc-500" />
-          </div>
+          <VsSearch />
         </div>
         <AuthCorner />
       </div>
@@ -241,6 +239,16 @@ function App() {
                     <span className="text-zinc-500">{shortAddr}</span>
                     {token && token.chain && (
                       <span className="px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 text-xs capitalize">{token.chain}</span>
+                    )}
+                    {token && token.twitter && (
+                      <a href={token.twitter} target="_blank" rel="noopener noreferrer" title="X (Twitter)" className="text-zinc-400 hover:text-white">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" /></svg>
+                      </a>
+                    )}
+                    {token && token.telegram && (
+                      <a href={token.telegram} target="_blank" rel="noopener noreferrer" title="Telegram" className="text-zinc-400 hover:text-white">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 4.3 18.9 19.04c-.23 1.01-.83 1.26-1.68.78l-4.64-3.42-2.24 2.15c-.25.25-.46.46-.93.46l.33-4.72L18.66 6.3c.37-.33-.08-.51-.58-.18L5.5 14.07l-4.57-1.43c-.99-.31-1.01-.99.21-1.47L20.66 2.9c.83-.31 1.55.19 1.28 1.4Z" /></svg>
+                      </a>
                     )}
                   </div>
                 </div>

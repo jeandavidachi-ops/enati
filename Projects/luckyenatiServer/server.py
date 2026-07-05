@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import re
 import time
 import secrets
 import hashlib
@@ -400,12 +401,97 @@ def debug_groups():
             'message': 'Failed to retrieve groups'
         }), 500
 
+@app.route('/api/search', methods=['GET'])
+def search():
+    """
+    Recherche live pour la barre du site : renvoie les groupes (par nom) et les tickers
+    (par nom de coin ou adresse de contrat) correspondant a la requete 'q'.
+    Reponse : {success, groups:[{group_id, group_name}], tickers:[{contract_address, coin_name, market_cap}]}
+    """
+    q = (request.args.get('q') or '').strip()
+    if not q:
+        return jsonify({'success': True, 'groups': [], 'tickers': []})
+
+    # Regex insensible a la casse, en echappant les caracteres speciaux saisis par l'utilisateur.
+    rx = {'$regex': re.escape(q), '$options': 'i'}
+
+    try:
+        # --- Groupes : dedup par group_id, tri par nombre de records, limite 6 ---
+        group_pipeline = [
+            {'$match': {'group_name': rx}},
+            {'$group': {
+                '_id': '$group_id',
+                'group_name': {'$first': '$group_name'},
+                'count': {'$sum': 1},
+            }},
+            {'$sort': {'count': -1}},
+            {'$limit': 6},
+        ]
+        groups = [
+            {'group_id': g['_id'], 'group_name': g.get('group_name') or 'Unknown'}
+            for g in users_collection.aggregate(group_pipeline)
+            if g.get('_id') is not None
+        ]
+
+        # --- Tickers : match sur coin_name OU contract_address, dedup par adresse, limite 6 ---
+        ticker_pipeline = [
+            {'$match': {
+                'contract_address': {'$exists': True, '$ne': None, '$ne': ''},
+                '$or': [{'coin_name': rx}, {'contract_address': rx}],
+            }},
+            {'$group': {
+                '_id': '$contract_address',
+                'coin_name': {'$first': '$coin_name'},
+                'market_cap': {'$first': '$market_cap'},
+                'count': {'$sum': 1},
+            }},
+            {'$sort': {'count': -1}},
+            {'$limit': 6},
+        ]
+        tickers = [
+            {
+                'contract_address': t['_id'],
+                'coin_name': t.get('coin_name') or 'Unknown',
+                'market_cap': t.get('market_cap'),
+            }
+            for t in users_collection.aggregate(ticker_pipeline)
+        ]
+
+        return jsonify({'success': True, 'groups': groups, 'tickers': tickers})
+    except Exception as e:
+        logger.error(f"Error in search for q={q!r}: {e}")
+        return jsonify({'success': False, 'error': str(e), 'groups': [], 'tickers': []}), 500
+
+
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({
         'status': 'healthy',
         'message': 'Server is running'
     }), 200
+
+def _extract_socials(info):
+    """
+    Extrait les liens X (Twitter) et Telegram depuis le bloc 'info' d'une paire DexScreener.
+    Structure attendue : info['socials'] = [{'type': 'twitter'|'telegram', 'url': ...}, ...].
+    Renvoie toujours {'twitter': url|None, 'telegram': url|None}.
+    """
+    out = {'twitter': None, 'telegram': None}
+    if not isinstance(info, dict):
+        return out
+    for s in (info.get('socials') or []):
+        if not isinstance(s, dict):
+            continue
+        stype = (s.get('type') or '').lower()
+        url = s.get('url')
+        if not url:
+            continue
+        if stype in ('twitter', 'x') and not out['twitter']:
+            out['twitter'] = url
+        elif stype == 'telegram' and not out['telegram']:
+            out['telegram'] = url
+    return out
+
 
 def get_pumpfun_image(contract_address):
     """
@@ -423,6 +509,9 @@ def get_pumpfun_image(contract_address):
                     'image_url': data['image_uri'],
                     'token_name': data.get('name'),
                     'token_symbol': data.get('symbol'),
+                    # pump.fun expose parfois les socials directement sur la fiche du coin.
+                    'twitter': data.get('twitter'),
+                    'telegram': data.get('telegram'),
                 }
     except Exception as e:
         logger.warning(f"pumpfun image fallback failed for {contract_address}: {e}")
@@ -444,11 +533,14 @@ def get_token_image(contract_address):
             if 'pairs' in data and len(data['pairs']) > 0:
                 first_pair = data['pairs'][0]
                 if 'info' in first_pair and 'imageUrl' in first_pair['info']:
+                    socials = _extract_socials(first_pair.get('info'))
                     return {
                         'success': True,
                         'image_url': first_pair['info']['imageUrl'],
                         'token_name': first_pair['baseToken']['name'],
-                        'token_symbol': first_pair['baseToken']['symbol']
+                        'token_symbol': first_pair['baseToken']['symbol'],
+                        'twitter': socials['twitter'],
+                        'telegram': socials['telegram'],
                     }
 
         # Pas d'image cote DexScreener -> secours pump.fun.
@@ -481,7 +573,8 @@ def get_token_detail(address):
     qui ont pris le call (depuis la base 'coins').
     """
     # --- DexScreener : identite, metriques live, meilleure paire ---
-    token = {'name': None, 'symbol': None, 'image': None, 'chain': None, 'pair_address': None}
+    token = {'name': None, 'symbol': None, 'image': None, 'chain': None, 'pair_address': None,
+             'twitter': None, 'telegram': None}
     metrics = {'price': None, 'market_cap': None, 'volume_24h': None,
                'liquidity': None, 'change_24h': None, 'holders': None, 'ath': None}
     mcap_now = None
@@ -506,6 +599,9 @@ def get_token_detail(address):
                 token['image'] = info.get('imageUrl')
                 token['chain'] = p.get('chainId')
                 token['pair_address'] = p.get('pairAddress')
+                socials = _extract_socials(info)
+                token['twitter'] = socials['twitter']
+                token['telegram'] = socials['telegram']
                 metrics['price'] = _to_float(p.get('priceUsd'))
                 mcap_now = _to_float(p.get('marketCap')) or _to_float(p.get('fdv'))
                 metrics['market_cap'] = mcap_now
@@ -522,6 +618,8 @@ def get_token_detail(address):
             token['image'] = fallback.get('image_url')
             token['name'] = token['name'] or fallback.get('token_name')
             token['symbol'] = token['symbol'] or fallback.get('token_symbol')
+            token['twitter'] = token['twitter'] or fallback.get('twitter')
+            token['telegram'] = token['telegram'] or fallback.get('telegram')
 
     # --- Groupes qui ont pris le call (un document par groupe) ---
     groups = []

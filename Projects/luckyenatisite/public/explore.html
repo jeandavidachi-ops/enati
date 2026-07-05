@@ -39,6 +39,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel" src="/js/versus-auth.js"></script>
+<script type="text/babel" src="/js/versus-search.js"></script>
 <script type="text/babel">
 const { useState, useEffect } = React;
 
@@ -126,8 +127,10 @@ function BlocksThumb({ src, g, e }) {
     </div>
   );
 }
-function BlocksCard({ image, name, stats, g, e, href, time, join }) {
+function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, telegram }) {
   const Tag = href ? "a" : "article";
+  // Ouvre le lien social sans declencher la navigation de la card (evite l'<a> imbrique).
+  const openSocial = (url) => (ev) => { ev.preventDefault(); ev.stopPropagation(); window.open(url, "_blank", "noopener"); };
   return (
     <Tag {...(href ? { href } : {})}
       className={"relative w-full block overflow-hidden rounded-[20px]" + (href ? " cursor-pointer transition-colors hover:border-white/30" : "")}
@@ -158,8 +161,12 @@ function BlocksCard({ image, name, stats, g, e, href, time, join }) {
           </dl>
           <div className="mt-3 flex items-center justify-between gap-2">
             <nav className="flex items-center gap-3 text-[#c9ccd2]">
-              <XIcon className="w-[clamp(15px,1vw,18px)] h-[clamp(15px,1vw,18px)] hover:text-white cursor-pointer" />
-              <TelegramIcon className="w-[clamp(16px,1.05vw,19px)] h-[clamp(16px,1.05vw,19px)] hover:text-white cursor-pointer" />
+              {twitter
+                ? <span role="link" title="X (Twitter)" onClick={openSocial(twitter)} className="hover:text-white cursor-pointer"><XIcon className="w-[clamp(15px,1vw,18px)] h-[clamp(15px,1vw,18px)]" /></span>
+                : <XIcon className="w-[clamp(15px,1vw,18px)] h-[clamp(15px,1vw,18px)] text-[#c9ccd2]/40" />}
+              {telegram
+                ? <span role="link" title="Telegram" onClick={openSocial(telegram)} className="hover:text-white cursor-pointer"><TelegramIcon className="w-[clamp(16px,1.05vw,19px)] h-[clamp(16px,1.05vw,19px)]" /></span>
+                : <TelegramIcon className="w-[clamp(16px,1.05vw,19px)] h-[clamp(16px,1.05vw,19px)] text-[#c9ccd2]/40" />}
             </nav>
             {join ? (
             <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
@@ -262,8 +269,13 @@ function App() {
       const idx = start + k;
       if (!t.addr || t.img) return;
       fetch("/api/token-image/" + encodeURIComponent(t.addr)).then(r => r.json()).then(img => {
-        if (img && img.success && img.image_url) {
-          setItems(prev => prev.map((x, j) => j === idx ? { ...x, img: img.image_url } : x));
+        if (img && img.success) {
+          setItems(prev => prev.map((x, j) => j === idx ? {
+            ...x,
+            img: img.image_url || x.img,
+            twitter: img.twitter || null,
+            telegram: img.telegram || null,
+          } : x));
         }
       }).catch(() => {});
     });
@@ -291,11 +303,7 @@ function App() {
             </span>
           </nav>
           <div className="flex-1 max-w-xl mx-auto hidden sm:block">
-            <div className="flex items-center gap-2 rounded-xl bg-zinc-900 ring-1 ring-white/10 px-3 py-2 text-zinc-400">
-              <SearchIcon className="w-4 h-4" />
-              <input placeholder="Search groups or tickers" className="bg-transparent outline-none text-sm flex-1 placeholder-zinc-500" />
-              <span className="text-xs px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 ring-1 ring-white/10">/</span>
-            </div>
+            <VsSearch />
           </div>
           <AuthCorner />
           </div>
@@ -324,6 +332,7 @@ function App() {
                   ))
                 : pageItems.map((d, i) => (
                     <BlocksCard key={start + i} image={d.img} name={d.sym} g={d.g} e={d.e}
+                      twitter={d.twitter} telegram={d.telegram}
                       href={d.addr ? ("/ticker/" + encodeURIComponent(d.addr)) : null}
                       stats={[
                         { label: "Best", value: d.mult + "x", positive: true },
