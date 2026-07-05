@@ -96,7 +96,7 @@ function GroupAvatar({ id, label, i, size }) {
 
 function Header() {
   return (
-    <header className="px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-5">
+    <header className="pl-6 pr-4 sm:pr-6 lg:pr-10 xl:pr-16 2xl:pr-24 py-5">
       <div className="w-full flex items-center gap-6">
         <a href="/" style={{ fontFamily: "Arial, Helvetica, sans-serif" }} className="text-2xl font-semibold tracking-[0.15em] italic select-none text-zinc-300">VERSUS</a>
         <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-300">
@@ -295,6 +295,9 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+<script>
+(function(){function az(){var w=window.innerWidth;document.documentElement.style.zoom=String((w>=2000)?1:(w>=1024?0.64:1));}az();window.addEventListener('resize',az);})();
 </script>
 </body>
 </html>

@@ -327,7 +327,6 @@ function App() {
   }, []);
   const lbPad = lbLg ? (lbCollapsed ? 44 : 300) : 0;
   const lbTopRef = useRef(null);
-  const contentRef = useRef(null);
   const [lbTop, setLbTop] = useState(0);
   useEffect(() => {
     const el = lbTopRef.current;
@@ -344,9 +343,8 @@ function App() {
     const REF = 2000; // largeur "grand ecran" de reference
     const applyZoom = () => {
       const w = window.innerWidth;
-      const z = (w >= REF) ? 0.8 : (w >= 1024 ? 0.64 : 1);
-      document.documentElement.style.zoom = "";      // header + page a taille normale
-      if (contentRef.current) contentRef.current.style.zoom = String(z);
+      const z = (w >= REF) ? 1 : (w >= 1024 ? 0.64 : 1);
+      document.documentElement.style.zoom = String(z);
     };
     applyZoom();
     window.addEventListener("resize", applyZoom);
@@ -401,7 +399,7 @@ function App() {
         </header>
         </div>
 
-        <div ref={contentRef} className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col">
         <main className="pl-6 pr-4 sm:pr-6 lg:pr-10 xl:pr-16 2xl:pr-24 py-8">
           <div className="max-w-[clamp(960px,72vw,1400px)] mx-auto w-full">
           <div className="flex items-center justify-between gap-4 flex-wrap">
