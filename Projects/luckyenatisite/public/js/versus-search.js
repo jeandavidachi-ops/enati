@@ -63,6 +63,7 @@ function VsSearch(props) {
   const [res, setRes] = React.useState({ groups: [], tickers: [] });
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [tokenImgs, setTokenImgs] = React.useState({}); // cache { [addr]: url } persistant entre frappes
   const wrapRef = React.useRef(null);
   const timerRef = React.useRef(null);
   const seqRef = React.useRef(0);
@@ -86,6 +87,24 @@ function VsSearch(props) {
     }, 180);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [q]);
+
+  // Resout l'image de chaque ticker via /api/token-image/<addr> (<=6), avec cache.
+  React.useEffect(() => {
+    res.tickers.forEach((t) => {
+      const addr = t.contract_address;
+      if (!addr || tokenImgs[addr] !== undefined) return;
+      // Marque comme "en cours" (null) pour eviter les fetch redondants entre frappes.
+      setTokenImgs((prev) => (prev[addr] !== undefined ? prev : { ...prev, [addr]: null }));
+      fetch("/api/token-image/" + encodeURIComponent(addr))
+        .then((r) => r.json())
+        .then((img) => {
+          if (img && img.success && img.image_url) {
+            setTokenImgs((prev) => ({ ...prev, [addr]: img.image_url }));
+          }
+        })
+        .catch(() => {});
+    });
+  }, [res.tickers]);
 
   // Fermeture au clic dehors + touche Echap.
   React.useEffect(() => {
@@ -141,11 +160,14 @@ function VsSearch(props) {
               <div className="vs-search-sec">Tickers</div>
               {res.tickers.map((t, i) => {
                 const mc = vsFmtMC(t.market_cap);
+                const imgUrl = tokenImgs[t.contract_address];
                 return (
                   <a key={"t" + i} className="vs-search-row"
                     href={"/ticker/" + encodeURIComponent(t.contract_address)}>
                     <span className="vs-search-av">
-                      {(t.coin_name || "?").slice(0, 1).toUpperCase()}
+                      {imgUrl
+                        ? <img src={imgUrl} alt="" onError={(e) => { e.target.style.display = "none"; }} />
+                        : (t.coin_name || "?").slice(0, 1).toUpperCase()}
                     </span>
                     <div className="vs-search-main">
                       <div className="vs-search-name">{t.coin_name}</div>
