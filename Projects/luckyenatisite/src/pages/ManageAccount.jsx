@@ -1,5 +1,7 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import PageShell from '../components/shared/PageShell.jsx'
+import { apiFetch } from '../lib/api.js'
+import { connectTelegram } from '../lib/telegram.js'
 
 // Contenu porte depuis new/Manage Account.dc.html (maquette statique).
 const HTML = `
@@ -87,10 +89,10 @@ const HTML = `
                 <span style="color:#ffffff;font-size:14px;font-weight:600;line-height:1;">Telegram Account</span>
                 <span style="display:inline-flex;align-items:center;height:20px;padding:0 8px;background:#12211a;color:#00e676;font-size:11px;font-weight:600;border-radius:5px;">Connected</span>
               </div>
-              <span style="color:#8b9599;font-size:13px;font-weight:400;line-height:1;">@degen_ape</span>
+              <span id="vs-tg-username" style="color:#8b9599;font-size:13px;font-weight:400;line-height:1;">@degen_ape</span>
             </div>
           </div>
-          <button style="height:40px;padding:0 20px;background:transparent;border:1px solid #253036;border-radius:7px;color:#d3d9db;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">Change</button>
+          <button id="vs-tg-change" style="height:40px;padding:0 20px;background:transparent;border:1px solid #253036;border-radius:7px;color:#d3d9db;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;">Change</button>
         </div>
       </div>
     </div>
@@ -199,9 +201,48 @@ const HTML = `
 </div>`
 
 export default function ManageAccount() {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const root = ref.current
+    if (!root) return
+    const usernameEl = root.querySelector('#vs-tg-username')
+    const changeBtn = root.querySelector('#vs-tg-change')
+
+    // Affiche l'username Telegram réellement lié (depuis /api/auth/me).
+    const showUsername = (user) => {
+      if (!usernameEl) return
+      const tg = user && user.telegram
+      const uname = tg && tg.username
+      usernameEl.textContent = uname ? '@' + uname : (tg ? tg.firstName || 'Connecté' : 'Non connecté')
+    }
+    apiFetch('/api/auth/me').then((d) => showUsername(d && d.user)).catch(() => {})
+
+    // Bouton "Change" : rouvre le widget Telegram et met à jour la liaison.
+    let busy = false
+    const onChange = async () => {
+      if (busy) return
+      busy = true
+      const prev = changeBtn.textContent
+      changeBtn.textContent = 'Connecting…'
+      changeBtn.disabled = true
+      try {
+        const user = await connectTelegram()
+        showUsername(user)
+      } catch (e) {
+        if (e && e.message && e.message !== 'cancelled') alert(e.message)
+      }
+      changeBtn.textContent = prev
+      changeBtn.disabled = false
+      busy = false
+    }
+    changeBtn && changeBtn.addEventListener('click', onChange)
+    return () => { changeBtn && changeBtn.removeEventListener('click', onChange) }
+  }, [])
+
   return (
     <PageShell>
-      <div style={{ background: "#070808" }} dangerouslySetInnerHTML={{ __html: HTML }} />
+      <div ref={ref} style={{ background: "#070808" }} dangerouslySetInnerHTML={{ __html: HTML }} />
     </PageShell>
   )
 }
