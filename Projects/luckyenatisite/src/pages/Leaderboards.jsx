@@ -284,10 +284,7 @@ export default function App() {
             </span>
           </nav>
           <div className="flex-1 max-w-xl mx-auto hidden sm:block">
-            <div className="flex items-center gap-2 rounded-xl bg-zinc-900 ring-1 ring-white/10 px-3 py-2 text-zinc-400">
-              <SearchIcon className="w-4 h-4" />
-              <input placeholder="Search groups or tickers" className="bg-transparent outline-none text-sm flex-1 placeholder-zinc-500" />
-            </div>
+            <VsSearch />
           </div>
           <AuthCorner />
           </div>
