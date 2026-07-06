@@ -22,6 +22,26 @@ const usersIcon = (stroke) => (
   </svg>
 )
 
+// Avatar du groupe : photo Telegram (proxy serveur, mis en cache cote serveur),
+// avec fallback sur un rond colore + initiale si pas de photo / erreur de chargement.
+function GroupAvatar({ g }) {
+  const [failed, setFailed] = useState(false)
+  const size = 52
+  if (failed) {
+    return (
+      <div style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, background: avatarColor(g.group_id), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 700 }}>{initialOf(g.group_name)}</div>
+    )
+  }
+  return (
+    <img
+      src={`/api/group-photo/${g.group_id}`}
+      alt=""
+      onError={() => setFailed(true)}
+      style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, objectFit: 'cover', background: avatarColor(g.group_id) }}
+    />
+  )
+}
+
 function fmtMembers(n) {
   if (n == null) return '—'
   if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'K'
@@ -39,7 +59,7 @@ function JoinedRow({ g, last }) {
       style={{ display: 'grid', gridTemplateColumns: '2.1fr 1fr 0.8fr 0.9fr 1.15fr 1.1fr', alignItems: 'center', height: 88, borderBottom: `1px solid ${last ? 'transparent' : '#1b2429'}`, cursor: 'pointer' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{ width: 52, height: 52, borderRadius: '50%', flexShrink: 0, background: avatarColor(g.group_id), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 700 }}>{initialOf(g.group_name)}</div>
+        <GroupAvatar g={g} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ color: '#ffffff', fontSize: 15, fontWeight: 600, lineHeight: 1 }}>{g.group_name}</span>
         </div>
@@ -87,7 +107,7 @@ function AvailableRow({ g, last }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '2.1fr 1fr 0.8fr 0.9fr 1.15fr 1.1fr', alignItems: 'center', height: 88, borderBottom: `1px solid ${last ? 'transparent' : '#1b2429'}` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{ width: 52, height: 52, borderRadius: '50%', flexShrink: 0, background: avatarColor(g.group_id), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 700 }}>{initialOf(g.group_name)}</div>
+        <GroupAvatar g={g} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ color: '#ffffff', fontSize: 15, fontWeight: 600, lineHeight: 1 }}>{g.group_name}</span>
         </div>
