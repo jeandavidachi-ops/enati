@@ -97,7 +97,7 @@ function AvailableRow({ g, last }) {
       <div style={{ color: '#ff3b24', fontSize: 15, fontWeight: 600 }}>{g.defeats}</div>
       <div style={{ color: '#d3d9db', fontSize: 15, fontWeight: 500 }}>{g.calls}</div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-        <button onClick={requestJoin} disabled={busy} style={{ height: 38, padding: '0 20px', border: '1px solid rgba(0,230,118,0.45)', background: 'transparent', borderRadius: 7, color: '#00e676', fontSize: 14, fontWeight: 600, cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit', opacity: busy ? 0.6 : 1 }}>
+        <button onClick={requestJoin} disabled={busy} style={{ height: 38, padding: '0 20px', border: '1px solid rgba(0,230,118,0.45)', background: 'transparent', borderRadius: 7, color: '#00e676', fontSize: 14, fontWeight: 600, cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit', opacity: busy ? 0.6 : 1, whiteSpace: 'nowrap', lineHeight: '36px' }}>
           {busy ? '…' : (requested ? 'Request again' : 'Join')}
         </button>
         {noLink && <span style={{ color: '#8b9599', fontSize: 11 }}>No invite link available (bot not admin)</span>}
