@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import PageShell from '../components/shared/PageShell.jsx'
-import { useApi } from '../lib/api.js'
-import useTelegramConnect from '../components/shared/useTelegramConnect.js'
+import { useApi, apiSet } from '../lib/api.js'
 
 // En-tete de la page.
 const HTML_HEADER = `
@@ -162,25 +161,78 @@ const HTML_BOTTOM = `
   </div>
 </div>`
 
-// Carte "Connected Accounts" en JSX : la ligne Telegram est fonctionnelle et
-// reutilise EXACTEMENT le flux du header (useTelegramConnect).
+// Carte "Connected Accounts" en JSX : la liaison Telegram se fait via le BOT
+// (deep-link /start <token>), ce qui permet a l'utilisateur de CHOISIR son compte
+// dans son app Telegram. Pas de widget web (qui reutilise le compte du navigateur).
 function ConnectedAccountsCard() {
   const me = useApi('/api/auth/me')
   const [user, setUser] = useState(null)
-  const [note, setNote] = useState(null) // { ok:bool, text }
+  const [note, setNote] = useState(null)     // { ok:bool, text }
+  const [waiting, setWaiting] = useState(false)
+  const pollRef = useRef(null)
+  const stopRef = useRef(null)
 
   const current = user || (me && me.user) || null
   const tg = current && current.telegram
   const tgLabel = tg ? (tg.username ? '@' + tg.username : (tg.firstName || 'Connecté')) : 'Non connecté'
 
-  const { connect, busy } = useTelegramConnect({
-    onConnected: (u) => {
-      setUser(u)
-      const un = u && u.telegram && u.telegram.username
-      setNote({ ok: true, text: un ? `Compte Telegram mis à jour (@${un})` : 'Compte Telegram mis à jour' })
-    },
-    onError: (msg) => setNote({ ok: false, text: msg }),
-  })
+  const clearPolling = () => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+    if (stopRef.current) { clearTimeout(stopRef.current); stopRef.current = null }
+  }
+  useEffect(() => clearPolling, [])
+
+  // Lance la liaison : cree un jeton, ouvre le deep-link Telegram, puis attend
+  // que le bot confirme la liaison (polling du statut).
+  async function startLink() {
+    setNote(null)
+    try {
+      const r = await fetch('/api/auth/telegram/link-token', { method: 'POST' })
+      const data = await r.json()
+      if (!r.ok || !data.deep_link) { setNote({ ok: false, text: data.error || 'Impossible de démarrer la liaison.' }); return }
+      window.open(data.deep_link, '_blank', 'noopener')
+      setWaiting(true)
+      clearPolling()
+      pollRef.current = setInterval(async () => {
+        try {
+          const s = await fetch('/api/auth/telegram/link-status?token=' + encodeURIComponent(data.token))
+          const sd = await s.json()
+          if (sd.linked) {
+            clearPolling()
+            setWaiting(false)
+            setUser(sd.user)
+            apiSet('/api/auth/me', { user: sd.user })
+            const un = sd.user && sd.user.telegram && sd.user.telegram.username
+            setNote({ ok: true, text: un ? `Compte Telegram lié (@${un}) ✅` : 'Compte Telegram lié ✅' })
+          }
+        } catch { /* on retente au prochain tick */ }
+      }, 2000)
+      // Arret automatique apres 2 min sans confirmation.
+      stopRef.current = setTimeout(() => {
+        clearPolling()
+        setWaiting(false)
+        setNote({ ok: false, text: "Aucune confirmation reçue. Réessaie et appuie bien sur « Start » dans Telegram." })
+      }, 120000)
+    } catch {
+      setNote({ ok: false, text: 'Erreur réseau.' })
+    }
+  }
+
+  async function disconnect() {
+    setNote(null)
+    try {
+      const r = await fetch('/api/auth/telegram/unlink', { method: 'POST' })
+      const data = await r.json()
+      if (!r.ok) { setNote({ ok: false, text: data.error || 'Échec de la déconnexion.' }); return }
+      setUser(data.user)
+      apiSet('/api/auth/me', { user: data.user })
+      setNote({ ok: true, text: 'Compte Telegram déconnecté.' })
+    } catch {
+      setNote({ ok: false, text: 'Erreur réseau.' })
+    }
+  }
+
+  const btnStyle = (extra) => ({ height: 40, padding: '0 20px', background: 'transparent', border: '1px solid #253036', borderRadius: 7, color: '#d3d9db', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, ...extra })
 
   return (
     <div style={{ border: '1px solid #253036', borderRadius: 8, background: '#101314' }}>
@@ -216,10 +268,22 @@ function ConnectedAccountsCard() {
               <span style={{ color: '#8b9599', fontSize: 13, fontWeight: 400, lineHeight: 1 }}>{tgLabel}</span>
             </div>
           </div>
-          <button onClick={connect} disabled={busy} style={{ height: 40, padding: '0 20px', background: 'transparent', border: '1px solid #253036', borderRadius: 7, color: '#d3d9db', fontSize: 14, fontWeight: 600, cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0, opacity: busy ? 0.6 : 1 }}>
-            {busy ? 'Connecting…' : (tg ? 'Change' : 'Connect')}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <button onClick={startLink} disabled={waiting} style={btnStyle({ cursor: waiting ? 'default' : 'pointer', opacity: waiting ? 0.6 : 1 })}>
+              {waiting ? 'En attente…' : (tg ? 'Changer de compte' : 'Connecter Telegram')}
+            </button>
+            {tg && !waiting && (
+              <button onClick={disconnect} style={btnStyle({ border: '1px solid rgba(255,59,36,0.45)', color: '#ff3b24' })}>
+                Disconnect
+              </button>
+            )}
+          </div>
         </div>
+        {waiting && (
+          <div style={{ padding: '0 0 12px 0', color: '#8b9599', fontSize: 13, fontWeight: 500 }}>
+            Ouvre Telegram, <b style={{ color: '#c4ccce' }}>choisis le compte voulu</b> et appuie sur « Start ». Cette page se met à jour automatiquement.
+          </div>
+        )}
         {note && (
           <div style={{ padding: '0 0 16px 0', color: note.ok ? '#00e676' : '#ff7a8a', fontSize: 13, fontWeight: 500 }}>{note.text}</div>
         )}

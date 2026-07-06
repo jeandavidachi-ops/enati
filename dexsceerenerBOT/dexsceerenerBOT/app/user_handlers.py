@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import Command, CommandObject, StateFilter
 from aiogram.exceptions import TelegramMigrateToChat
 
 from datetime import datetime, timedelta
@@ -25,6 +25,9 @@ from pymongo import MongoClient
 client = MongoClient(MONGO_DB_URL)
 db = client['enati']
 users_collection = db['coins']
+# Liaison compte web <-> Telegram via deep-link /start <token> (memes collections que le site).
+app_users = db['app_users']
+tg_link_tokens = db['tg_link_tokens']
 
 user_handlers = Router()
 bot = Bot(token=TOKEN)
@@ -58,13 +61,39 @@ def format_marketcap(marketcap):
     except ValueError:
         return str(marketcap)  # Если не число, возвращаем как строку
 
+def _link_web_account(token, tg_user):
+    """Relie un compte web au compte Telegram via un jeton (deep-link). Renvoie
+    True si un jeton valide et non utilise a ete consomme."""
+    doc = tg_link_tokens.find_one({'token': token, 'used': False})
+    if not doc:
+        return False
+    tg = {
+        'id': tg_user.id,
+        'username': tg_user.username,
+        'firstName': tg_user.first_name,
+        'photoUrl': None,
+        'linkedAt': time.time(),
+    }
+    app_users.update_one({'id': doc['user_id']}, {'$set': {'telegram': tg}})
+    tg_link_tokens.update_one({'_id': doc['_id']}, {'$set': {'used': True}})
+    return True
+
+
 @user_handlers.message(Command('start'))
-async def cmd_start(message:Message, state:FSMContext):
+async def cmd_start(message:Message, state:FSMContext, command: CommandObject = None):
     user_id = message.from_user.id
 
     if not db.user_exists(user_id):
         db.add_user(user_id)
 
+    # Deep-link de liaison : /start <token> depuis le site (Manage Account).
+    token = (command.args or '').strip() if command else ''
+    if token:
+        if _link_web_account(token, message.from_user):
+            await message.answer('✅ Ton compte Telegram est maintenant lié à Versus. Tu peux retourner sur le site.')
+        else:
+            await message.answer("⚠️ Lien de connexion invalide ou expiré. Relance l'opération depuis le site.")
+        return
 
     await message.answer(
         f'*🚀 Welcome to Our Bot*\n\n'

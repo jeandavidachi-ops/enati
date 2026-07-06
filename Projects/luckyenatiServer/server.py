@@ -78,10 +78,15 @@ app_users = db['app_users']
 app_sessions = db['app_sessions']
 # Marqueurs "demande de join emise" par un user web sur un groupe (page Your Groups).
 group_join_requests = db['group_join_requests']
+# Jetons ephemeres pour lier un compte Telegram via le bot (deep-link /start <token>).
+tg_link_tokens = db['tg_link_tokens']
 try:
     app_users.create_index('email', unique=True)
     app_sessions.create_index('token', unique=True)
     group_join_requests.create_index([('user_id', 1), ('group_id', 1)], unique=True)
+    tg_link_tokens.create_index('token', unique=True)
+    # Expiration automatique des jetons apres 10 min (TTL index Mongo).
+    tg_link_tokens.create_index('created_at', expireAfterSeconds=600)
 except Exception as _e:
     logger.warning(f"Auth index setup: {_e}")
 
@@ -223,6 +228,59 @@ def auth_telegram():
     app_users.update_one({'id': user['id']}, {'$set': {'telegram': tg}})
     user = app_users.find_one({'id': user['id']})
     return jsonify({'user': _public_user(user)})
+
+
+@app.route('/api/auth/telegram/unlink', methods=['POST'])
+def auth_telegram_unlink():
+    """Delie le compte Telegram du compte web (cote site uniquement)."""
+    user = _current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated.'}), 401
+    app_users.update_one({'id': user['id']}, {'$set': {'telegram': None}})
+    user = app_users.find_one({'id': user['id']})
+    return jsonify({'user': _public_user(user)})
+
+
+@app.route('/api/auth/telegram/link-token', methods=['POST'])
+def auth_telegram_link_token():
+    """Cree un jeton a usage unique et renvoie le deep-link du bot. L'utilisateur
+    ouvre ce lien dans SON app Telegram (ou il choisit son compte) et appuie sur
+    Start ; le bot relie alors le compte via /start <token>."""
+    user = _current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated.'}), 401
+    bot_username = None
+    if BOT_TOKEN:
+        cfg = auth_config().get_json().get('telegram') or {}
+        bot_username = cfg.get('bot_username')
+    if not bot_username:
+        return jsonify({'error': 'Bot non configure.'}), 503
+
+    token = secrets.token_urlsafe(24)
+    tg_link_tokens.insert_one({
+        'token': token,
+        'user_id': user['id'],
+        'used': False,
+        'created_at': datetime.utcnow(),
+    })
+    return jsonify({
+        'token': token,
+        'deep_link': f'https://t.me/{bot_username}?start={token}',
+    })
+
+
+@app.route('/api/auth/telegram/link-status', methods=['GET'])
+def auth_telegram_link_status():
+    """Indique si le jeton a ete consomme par le bot (compte lie)."""
+    user = _current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated.'}), 401
+    token = request.args.get('token') or ''
+    doc = tg_link_tokens.find_one({'token': token, 'user_id': user['id']})
+    linked = bool(doc and doc.get('used'))
+    # On renvoie l'utilisateur a jour pour que le front rafraichisse l'affichage.
+    fresh = app_users.find_one({'id': user['id']})
+    return jsonify({'linked': linked, 'user': _public_user(fresh)})
 
 
 @app.route('/api/group-photo/<group_id>', methods=['GET'])
