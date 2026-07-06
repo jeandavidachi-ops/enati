@@ -76,9 +76,12 @@ GROUP_PHOTO_TTL = 3600           # 1h
 # =====================================================================
 app_users = db['app_users']
 app_sessions = db['app_sessions']
+# Marqueurs "demande de join emise" par un user web sur un groupe (page Your Groups).
+group_join_requests = db['group_join_requests']
 try:
     app_users.create_index('email', unique=True)
     app_sessions.create_index('token', unique=True)
+    group_join_requests.create_index([('user_id', 1), ('group_id', 1)], unique=True)
 except Exception as _e:
     logger.warning(f"Auth index setup: {_e}")
 
@@ -757,6 +760,173 @@ def get_all_groups_stats_endpoint():
     """
     result = get_all_groups_stats()
     return jsonify(result)
+
+
+# =====================================================================
+#  Page "Your Groups" : appartenance + groupes disponibles.
+#  Le pont d'identite est le compte Telegram lie (app_users.telegram.id).
+#  Un bot ne peut pas lister les groupes d'un user : on part des groupes
+#  connus (ceux ou le bot est present, = group_id distincts de 'coins')
+#  et on teste l'appartenance via getChatMember.
+# =====================================================================
+_MEMBER_STATUSES = {'creator', 'administrator', 'member', 'restricted'}
+
+_chat_member_cache = {}   # (group_id, tg_id) -> (status, ts)
+_member_count_cache = {}  # group_id -> (count, ts)
+_join_link_cache = {}     # group_id -> (link_or_None, ts)
+CHAT_MEMBER_TTL = 300     # 5 min
+MEMBER_COUNT_TTL = 3600   # 1h
+JOIN_LINK_TTL = 3600      # 1h
+
+
+def _tg_get_chat_member(group_id, tg_id):
+    """Statut d'appartenance du user au groupe (via getChatMember), ou None si
+    indeterminable (bot absent du groupe, user inconnu, pas de token...)."""
+    if not BOT_TOKEN:
+        return None
+    key = (group_id, tg_id)
+    cached = _chat_member_cache.get(key)
+    if cached and (time.time() - cached[1] < CHAT_MEMBER_TTL):
+        return cached[0]
+    status = None
+    try:
+        r = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/getChatMember',
+                         params={'chat_id': group_id, 'user_id': tg_id}, timeout=8)
+        j = r.json()
+        if j.get('ok'):
+            member = j.get('result') or {}
+            status = member.get('status')
+            # 'restricted' peut etre un membre encore present (is_member) ou non.
+            if status == 'restricted' and not member.get('is_member', False):
+                status = 'left'
+    except requests.RequestException as e:
+        logger.warning(f"getChatMember failed for {group_id}/{tg_id}: {e}")
+    _chat_member_cache[key] = (status, time.time())
+    return status
+
+
+def _tg_member_count(group_id):
+    """Nombre reel de membres du groupe (getChatMemberCount), ou None."""
+    if not BOT_TOKEN:
+        return None
+    cached = _member_count_cache.get(group_id)
+    if cached and (time.time() - cached[1] < MEMBER_COUNT_TTL):
+        return cached[0]
+    count = None
+    try:
+        r = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/getChatMemberCount',
+                         params={'chat_id': group_id}, timeout=8)
+        j = r.json()
+        if j.get('ok'):
+            count = j.get('result')
+    except requests.RequestException as e:
+        logger.warning(f"getChatMemberCount failed for {group_id}: {e}")
+    _member_count_cache[group_id] = (count, time.time())
+    return count
+
+
+def _tg_join_link(group_id):
+    """Lien pour rejoindre le groupe : t.me/<username> si public, sinon un lien
+    d'invitation genere par le bot (echoue proprement si le bot n'est pas admin)
+    -> None. Le resultat (y compris None) est cache."""
+    if not BOT_TOKEN:
+        return None
+    cached = _join_link_cache.get(group_id)
+    if cached and (time.time() - cached[1] < JOIN_LINK_TTL):
+        return cached[0]
+    link = None
+    try:
+        chat = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/getChat',
+                            params={'chat_id': group_id}, timeout=8).json()
+        result = chat.get('result') or {}
+        username = result.get('username')
+        if username:
+            link = f'https://t.me/{username}'
+        else:
+            # Lien deja existant sur la fiche du chat (si le bot y a acces)...
+            link = result.get('invite_link')
+            if not link:
+                # ... sinon on tente d'en creer un (necessite bot admin + droit inviter).
+                inv = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/createChatInviteLink',
+                                   params={'chat_id': group_id}, timeout=8).json()
+                if inv.get('ok'):
+                    link = (inv.get('result') or {}).get('invite_link')
+    except requests.RequestException as e:
+        logger.warning(f"join link resolve failed for {group_id}: {e}")
+    _join_link_cache[group_id] = (link, time.time())
+    return link
+
+
+@app.route('/api/my-groups', methods=['GET'])
+def get_my_groups():
+    """Groupes de l'utilisateur connecte pour la page Your Groups.
+    - joined   : groupes (parmi ceux du bot) ou le user Telegram est membre.
+    - available: les autres, avec un lien de join si disponible + flag 'requested'.
+    Requiert un compte connecte ET un Telegram lie."""
+    user = _current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'not_authenticated'}), 401
+    tg = user.get('telegram') or {}
+    tg_id = tg.get('id')
+    if not tg_id:
+        return jsonify({'success': False, 'error': 'telegram_not_linked'}), 401
+
+    try:
+        tg_id = int(tg_id)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'invalid_telegram_id'}), 400
+
+    stats = get_all_groups_stats().get('data', [])
+    requested_ids = {
+        d['group_id'] for d in group_join_requests.find({'user_id': user['id']}, {'group_id': 1})
+    }
+
+    joined, available = [], []
+    for g in stats:
+        gid = g.get('group_id')
+        if gid is None:
+            continue
+        status = _tg_get_chat_member(gid, tg_id)
+        base = {
+            'group_id': gid,
+            'group_name': g.get('group_name', 'Unknown'),
+            'wins': g.get('total_wins', 0),
+            'defeats': g.get('total_defeats', 0),
+            'calls': g.get('total_members', 0),
+            'win_rate': round(g.get('win_rate', 0)),
+        }
+        if status in _MEMBER_STATUSES:
+            base['members'] = _tg_member_count(gid)
+            joined.append(base)
+        else:
+            base['join_link'] = _tg_join_link(gid)
+            base['requested'] = gid in requested_ids
+            available.append(base)
+
+    return jsonify({'success': True, 'joined': joined, 'available': available})
+
+
+@app.route('/api/group/<group_id>/request-join', methods=['POST'])
+def request_join_group(group_id):
+    """Enregistre qu'un user a demande a rejoindre un groupe et renvoie le lien
+    de join (a ouvrir cote client). Requiert compte + Telegram lie."""
+    user = _current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'not_authenticated'}), 401
+    if not (user.get('telegram') or {}).get('id'):
+        return jsonify({'success': False, 'error': 'telegram_not_linked'}), 401
+    try:
+        gid = int(group_id)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'invalid_group_id'}), 400
+
+    link = _tg_join_link(gid)
+    group_join_requests.update_one(
+        {'user_id': user['id'], 'group_id': gid},
+        {'$set': {'user_id': user['id'], 'group_id': gid, 'at': time.time()}},
+        upsert=True,
+    )
+    return jsonify({'success': bool(link), 'join_link': link})
 
 
 def get_group_detail(group_id):
