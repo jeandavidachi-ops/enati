@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import PageShell from '../components/shared/PageShell.jsx'
 import { apiFetch } from '../lib/api.js'
-import { connectTelegram } from '../lib/telegram.js'
+import { connectTelegram, preloadTelegram } from '../lib/telegram.js'
 
 // Contenu porte depuis new/Manage Account.dc.html (maquette statique).
 const HTML = `
@@ -206,6 +206,8 @@ export default function ManageAccount() {
   useEffect(() => {
     const root = ref.current
     if (!root) return
+    // Précharge widget + config pour ouvrir la popup synchrone au clic (sinon Telegram la referme).
+    preloadTelegram()
     const usernameEl = root.querySelector('#vs-tg-username')
     const changeBtn = root.querySelector('#vs-tg-change')
 
