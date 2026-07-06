@@ -82,7 +82,7 @@ function AvailableRow({ g, last }) {
 
   let action
   if (requested) {
-    action = <span style={{ color: '#8b9599', fontSize: 13, fontWeight: 600 }}>Demande émise</span>
+    action = <span style={{ color: '#8b9599', fontSize: 13, fontWeight: 600 }}>Requested</span>
   } else if (g.join_link) {
     action = (
       <button onClick={requestJoin} disabled={busy} style={{ height: 38, padding: '0 20px', border: '1px solid rgba(0,230,118,0.45)', background: 'transparent', borderRadius: 7, color: '#00e676', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -91,7 +91,7 @@ function AvailableRow({ g, last }) {
     )
   } else {
     action = (
-      <button disabled title="Lien indisponible (le bot n'est pas admin de ce groupe)" style={{ height: 38, padding: '0 20px', border: '1px solid #253036', background: 'transparent', borderRadius: 7, color: '#545e62', fontSize: 14, fontWeight: 600, cursor: 'not-allowed', fontFamily: 'inherit' }}>
+      <button disabled title="Link unavailable (bot is not an admin of this group)" style={{ height: 38, padding: '0 20px', border: '1px solid #253036', background: 'transparent', borderRadius: 7, color: '#545e62', fontSize: 14, fontWeight: 600, cursor: 'not-allowed', fontFamily: 'inherit' }}>
         Join
       </button>
     )
@@ -131,7 +131,7 @@ function GroupsTable({ rows, kind }) {
       </div>
       {rows.length === 0 ? (
         <div style={{ padding: '28px 0', color: '#8b9599', fontSize: 14 }}>
-          {kind === 'joined' ? "Aucun groupe rejoint pour l'instant." : 'Aucun autre groupe disponible.'}
+          {kind === 'joined' ? 'No groups joined yet.' : 'No other groups available.'}
         </div>
       ) : (
         rows.map((g, i) => <RowCmp key={g.group_id} g={g} last={i === rows.length - 1} />)
@@ -148,7 +148,7 @@ function RequestsPlaceholder() {
       <div style={{ padding: '22px 0 18px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
           <span style={{ color: '#ffffff', fontSize: 19, fontWeight: 700 }}>Requests From Groups</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', background: '#1b2429', color: '#c4ccce', fontSize: 12, fontWeight: 600, borderRadius: 6 }}>Bientôt</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', background: '#1b2429', color: '#c4ccce', fontSize: 12, fontWeight: 600, borderRadius: 6 }}>Soon</span>
         </div>
         <p style={{ margin: '9px 0 0 0', color: '#8b9599', fontSize: 14, fontWeight: 400, lineHeight: 1 }}>Groups that have invited you to join</p>
       </div>
@@ -193,7 +193,7 @@ export default function YourGroups() {
 
           {notLinked ? (
             <div style={{ marginTop: 26, border: '1px solid #253036', borderRadius: 8, background: '#0d1112', padding: '28px', color: '#8b9599', fontSize: 15 }}>
-              Connecte ton compte Telegram pour voir tes groupes.
+              Connect your Telegram account to see your groups.
             </div>
           ) : (
             <>
@@ -209,7 +209,7 @@ export default function YourGroups() {
               </div>
 
               {loading ? (
-                <div style={{ marginTop: 20, color: '#8b9599', fontSize: 14, padding: '28px 4px' }}>Chargement…</div>
+                <div style={{ marginTop: 20, color: '#8b9599', fontSize: 14, padding: '28px 4px' }}>Loading…</div>
               ) : tab === 'joined' ? (
                 <GroupsTable rows={joined} kind="joined" />
               ) : (

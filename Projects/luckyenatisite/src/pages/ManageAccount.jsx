@@ -174,7 +174,7 @@ function ConnectedAccountsCard() {
 
   const current = user || (me && me.user) || null
   const tg = current && current.telegram
-  const tgLabel = tg ? (tg.username ? '@' + tg.username : (tg.firstName || 'Connecté')) : 'Non connecté'
+  const tgLabel = tg ? (tg.username ? '@' + tg.username : (tg.firstName || 'Connected')) : 'Not connected'
 
   const clearPolling = () => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
@@ -189,7 +189,7 @@ function ConnectedAccountsCard() {
     try {
       const r = await fetch('/api/auth/telegram/link-token', { method: 'POST' })
       const data = await r.json()
-      if (!r.ok || !data.deep_link) { setNote({ ok: false, text: data.error || 'Impossible de démarrer la liaison.' }); return }
+      if (!r.ok || !data.deep_link) { setNote({ ok: false, text: data.error || "Couldn't start linking." }); return }
       window.open(data.deep_link, '_blank', 'noopener')
       setWaiting(true)
       clearPolling()
@@ -203,7 +203,7 @@ function ConnectedAccountsCard() {
             setUser(sd.user)
             apiSet('/api/auth/me', { user: sd.user })
             const un = sd.user && sd.user.telegram && sd.user.telegram.username
-            setNote({ ok: true, text: un ? `Compte Telegram lié (@${un}) ✅` : 'Compte Telegram lié ✅' })
+            setNote({ ok: true, text: un ? `Telegram account linked (@${un}) ✅` : 'Telegram account linked ✅' })
           }
         } catch { /* on retente au prochain tick */ }
       }, 2000)
@@ -211,10 +211,10 @@ function ConnectedAccountsCard() {
       stopRef.current = setTimeout(() => {
         clearPolling()
         setWaiting(false)
-        setNote({ ok: false, text: "Aucune confirmation reçue. Réessaie et appuie bien sur « Start » dans Telegram." })
+        setNote({ ok: false, text: 'No confirmation received. Try again and make sure to tap "Start" in Telegram.' })
       }, 120000)
     } catch {
-      setNote({ ok: false, text: 'Erreur réseau.' })
+      setNote({ ok: false, text: 'Network error.' })
     }
   }
 
@@ -223,12 +223,12 @@ function ConnectedAccountsCard() {
     try {
       const r = await fetch('/api/auth/telegram/unlink', { method: 'POST' })
       const data = await r.json()
-      if (!r.ok) { setNote({ ok: false, text: data.error || 'Échec de la déconnexion.' }); return }
+      if (!r.ok) { setNote({ ok: false, text: data.error || 'Failed to disconnect.' }); return }
       setUser(data.user)
       apiSet('/api/auth/me', { user: data.user })
-      setNote({ ok: true, text: 'Compte Telegram déconnecté.' })
+      setNote({ ok: true, text: 'Telegram account disconnected.' })
     } catch {
-      setNote({ ok: false, text: 'Erreur réseau.' })
+      setNote({ ok: false, text: 'Network error.' })
     }
   }
 
@@ -270,7 +270,7 @@ function ConnectedAccountsCard() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <button onClick={startLink} disabled={waiting} style={btnStyle({ cursor: waiting ? 'default' : 'pointer', opacity: waiting ? 0.6 : 1 })}>
-              {waiting ? 'En attente…' : (tg ? 'Changer de compte' : 'Connecter Telegram')}
+              {waiting ? 'Waiting…' : (tg ? 'Change account' : 'Connect Telegram')}
             </button>
             {tg && !waiting && (
               <button onClick={disconnect} style={btnStyle({ border: '1px solid rgba(255,59,36,0.45)', color: '#ff3b24' })}>
@@ -281,7 +281,7 @@ function ConnectedAccountsCard() {
         </div>
         {waiting && (
           <div style={{ padding: '0 0 12px 0', color: '#8b9599', fontSize: 13, fontWeight: 500 }}>
-            Ouvre Telegram, <b style={{ color: '#c4ccce' }}>choisis le compte voulu</b> et appuie sur « Start ». Cette page se met à jour automatiquement.
+            Open Telegram, <b style={{ color: '#c4ccce' }}>choose the account you want</b> and tap "Start". This page updates automatically.
           </div>
         )}
         {note && (

@@ -90,9 +90,9 @@ async def cmd_start(message:Message, state:FSMContext, command: CommandObject = 
     token = (command.args or '').strip() if command else ''
     if token:
         if _link_web_account(token, message.from_user):
-            await message.answer('✅ Ton compte Telegram est maintenant lié à Versus. Tu peux retourner sur le site.')
+            await message.answer('✅ Your Telegram account is now linked to Versus. You can go back to the site.')
         else:
-            await message.answer("⚠️ Lien de connexion invalide ou expiré. Relance l'opération depuis le site.")
+            await message.answer('⚠️ Invalid or expired link. Please restart from the site.')
         return
 
     await message.answer(
