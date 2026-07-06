@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+﻿import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import VsSearch from '../components/VsSearch.jsx'
+import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
-import { useApi, apiFetch, apiGet, apiSet } from '../lib/api.js'
+import { useApi, apiFetch } from '../lib/api.js'
 
 // ---- Helpers ----
 const GRADS = [
@@ -11,7 +12,7 @@ const GRADS = [
   "from-purple-600 to-indigo-800","from-orange-600 to-red-800",
   "from-pink-600 to-rose-900","from-cyan-600 to-blue-900",
 ];
-const EMOJIS = ["⚔️","🚀","🔥","💎","🐍","👑","🦅","🪙","🛡️","🐱","₿","🎯"];
+const EMOJIS = ["âš”ï¸","ðŸš€","ðŸ”¥","ðŸ’Ž","ðŸ","ðŸ‘‘","ðŸ¦…","ðŸª™","ðŸ›¡ï¸","ðŸ±","â‚¿","ðŸŽ¯"];
 const gradOf = (i) => GRADS[Math.abs(i) % GRADS.length];
 const emojiOf = (i) => EMOJIS[Math.abs(i) % EMOJIS.length];
 
@@ -119,7 +120,7 @@ function Podium({ d, rank }) {
           <Avatar src={d ? d.img : null} g={d ? d.g : gradOf(rank)} e={d ? d.e : emojiOf(rank)}
             className={avatarSize + " rounded-2xl text-4xl"} />
           <div className={"mt-4 font-mono font-semibold text-white text-center truncate w-full " + nameSize}>
-            {d ? d.name : "—"}
+            {d ? d.name : "â€”"}
           </div>
         </div>
       </div>
@@ -262,7 +263,7 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [] }) {
   if (collapsed) {
     return (
       <div className="lb-rail">
-        <button onClick={onToggle} title="Ouvrir le menu">≫</button>
+        <button onClick={onToggle} title="Ouvrir le menu">â‰«</button>
       </div>
     );
   }
@@ -271,12 +272,12 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [] }) {
       <section className="panel">
         <header className="tabs">
           <nav className="tab-nav">
-            <a className={"tab alert" + (tab === "alerts" ? " active" : "")} href="#" onClick={(e) => { e.preventDefault(); setTab("alerts"); }}><span className="dot"></span><span className="bell">●</span> Alerts</a>
+            <a className={"tab alert" + (tab === "alerts" ? " active" : "")} href="#" onClick={(e) => { e.preventDefault(); setTab("alerts"); }}><span className="dot"></span><span className="bell">â—</span> Alerts</a>
             <a className={"tab" + (tab === "tokens" ? " active" : "")} href="#" onClick={(e) => { e.preventDefault(); setTab("tokens"); }}>Tokens</a>
             <a className={"tab" + (tab === "leaderboard" ? " active" : "")} href="#" onClick={(e) => { e.preventDefault(); setTab("leaderboard"); }}>Leaderboard</a>
             <a className={"tab" + (tab === "feed" ? " active" : "")} href="#" onClick={(e) => { e.preventDefault(); setTab("feed"); }}>Feed</a>
           </nav>
-          <button className="collapse" onClick={onToggle} title="Replier le menu">≪</button>
+          <button className="collapse" onClick={onToggle} title="Replier le menu">â‰ª</button>
         </header>
         {tab === "leaderboard" && (
         <div className="content">
@@ -287,7 +288,7 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [] }) {
             <button className="selected">ALL</button>
           </div>
           <div className="your-rank">
-            <div className="rank-avatar logo">∞</div>
+            <div className="rank-avatar logo">âˆž</div>
             <div>
               <div className="muted">Your rank</div>
               <div className="rankline"><span>#</span> -</div>
@@ -349,230 +350,13 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [] }) {
   );
 }
 
-// ---- Auth: social/brand icons ----
-const AppleIcon = (props) => (
-  <svg viewBox="0 0 24 24" fill="#fff" {...props}><path d="M16.4 12.8c0-2.1 1.7-3.1 1.8-3.2-1-1.4-2.5-1.6-3-1.6-1.3-.1-2.5.7-3.1.7-.6 0-1.6-.7-2.7-.7-1.4 0-2.6.8-3.3 2-.1.3-1.4 2.5-.4 5.2.5 1.3 1.1 2.8 2 2.8.8 0 1.1-.5 2.1-.5s1.2.5 2.1.5c.9 0 1.4-1.3 2-2.6.6-1 .9-1.9.9-2 0 0-1.7-.7-1.7-2.8ZM14.6 6.4c.5-.6.8-1.4.7-2.3-.7 0-1.6.5-2.1 1.1-.5.5-.9 1.4-.8 2.2.8.1 1.6-.4 2.2-1Z"/></svg>
-);
-const GoogleIcon = (props) => (
-  <svg viewBox="0 0 24 24" {...props}><path d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4c-.2 1.2-.9 2.3-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.4Z" fill="#4285F4"/><path d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 .9-3.4.9-2.6 0-4.8-1.7-5.6-4.1H3.1v2.6C4.7 19.8 8.1 22 12 22Z" fill="#34A853"/><path d="M6.4 13.9c-.2-.6-.3-1.2-.3-1.9s.1-1.3.3-1.9V7.5H3.1C2.4 8.9 2 10.4 2 12s.4 3.1 1.1 4.5l3.3-2.6Z" fill="#FBBC05"/><path d="M12 6c1.5 0 2.8.5 3.8 1.5l2.8-2.8C16.9 3.1 14.7 2 12 2 8.1 2 4.7 4.2 3.1 7.5l3.3 2.6C7.2 7.7 9.4 6 12 6Z" fill="#EA4335"/></svg>
-);
-const CloseIcon = (props) => (
-  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" {...props}><path d="M6 6l12 12M18 6L6 18"/></svg>
-);
-
-// ---- Login modal (fidele a new/Versus Login Modal.html) ----
-function LoginModal({ onClose, onSwitch, onAuthed }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
-  async function submit(e) {
-    e.preventDefault();
-    setErr(""); setBusy(true);
-    try {
-      const r = await fetch("/api/auth/login", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await r.json();
-      if (!r.ok) { setErr(data.error || "Login failed."); setBusy(false); return; }
-      onAuthed(data.user);
-    } catch { setErr("Network error."); setBusy(false); }
-  }
-  return (
-    <div className="vs-scrim" onMouseDown={onClose}>
-      <form className="vs-modal" onMouseDown={(e) => e.stopPropagation()} onSubmit={submit}>
-        <button type="button" aria-label="Close" className="vs-close" onClick={onClose}><CloseIcon /></button>
-        <div style={{ textAlign: "center" }}>
-          <div className="vs-chrome">VERSUS</div>
-          <h1 className="vs-h1">Welcome back</h1>
-          <p className="vs-sub">Log in to get back in the arena.</p>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 28 }}>
-          <button type="button" className="auth-btn"><AppleIcon />Apple</button>
-          <button type="button" className="auth-btn"><GoogleIcon />Google</button>
-        </div>
-        <div className="vs-divider" style={{ margin: "22px 0" }}><span></span>OR<span></span></div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
-          <div>
-            <label className="vs-label">Email address</label>
-            <input className="vs-field" type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
-              <label className="vs-label" style={{ marginBottom: 0 }}>Password</label>
-              <a className="vs-legal" style={{ fontSize: 13 }}>Forgot?</a>
-            </div>
-            <input className="vs-field" type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
-        </div>
-        {err && <div className="vs-err">{err}</div>}
-        <button className="btn-primary" style={{ marginTop: 22 }} disabled={busy}>
-          {busy ? "Logging in…" : <>Log in <span style={{ fontFamily: "JetBrains Mono" }}>&rarr;</span></>}
-        </button>
-        <div className="vs-linktext">
-          New to Versus? <a onClick={onSwitch}>Create an account</a>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-// ---- Signup modal (fidele a new/Versus Signup Modal.html) ----
-function SignupModal({ onClose, onSwitch, onAuthed }) {
-  const [emailMode, setEmailMode] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
-  async function submit(e) {
-    e.preventDefault();
-    setErr(""); setBusy(true);
-    try {
-      const r = await fetch("/api/auth/signup", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await r.json();
-      if (!r.ok) { setErr(data.error || "Sign up failed."); setBusy(false); return; }
-      onAuthed(data.user);
-    } catch { setErr("Network error."); setBusy(false); }
-  }
-  return (
-    <div className="vs-scrim" onMouseDown={onClose}>
-      <div className="vs-modal" onMouseDown={(e) => e.stopPropagation()}>
-        <button type="button" aria-label="Close" className="vs-close" onClick={onClose}><CloseIcon /></button>
-        <div style={{ textAlign: "center" }}>
-          <div className="vs-chrome">VERSUS</div>
-          <h1 className="vs-h1">Create your account</h1>
-          <p className="vs-sub">Join the arena in under a minute.</p>
-        </div>
-        {!emailMode ? (
-          <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 30 }}>
-              <button type="button" className="auth-btn"><AppleIcon width="20" height="20" /><span className="lbl">Continue with Apple</span></button>
-              <button type="button" className="auth-btn"><GoogleIcon width="20" height="20" /><span className="lbl">Continue with Google</span></button>
-              <div className="vs-divider" style={{ margin: "4px 0" }}><span></span>OR<span></span></div>
-              <button type="button" className="auth-btn" onClick={() => setEmailMode(true)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#c6c6ca" strokeWidth="1.8" width="20" height="20"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7l8 6 8-6"/></svg>
-                <span className="lbl">Continue with email</span>
-              </button>
-            </div>
-            <p className="vs-legal" style={{ marginTop: 24, textAlign: "center" }}>By continuing you agree to our <a>Terms of Service</a> and <a>Privacy Policy</a>.</p>
-          </>
-        ) : (
-          <form onSubmit={submit}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 13, marginTop: 28 }}>
-              <div>
-                <label className="vs-label">Email address</label>
-                <input className="vs-field" type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-              <div>
-                <label className="vs-label">Password</label>
-                <input className="vs-field" type="password" placeholder="At least 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} />
-              </div>
-            </div>
-            {err && <div className="vs-err">{err}</div>}
-            <button className="btn-primary" style={{ marginTop: 22 }} disabled={busy}>
-              {busy ? "Creating…" : <>Create account <span style={{ fontFamily: "JetBrains Mono" }}>&rarr;</span></>}
-            </button>
-            <p className="vs-legal" style={{ marginTop: 16, textAlign: "center" }}>By continuing you agree to our <a>Terms of Service</a> and <a>Privacy Policy</a>.</p>
-          </form>
-        )}
-        <div className="vs-linktext">
-          Already have an account? <a onClick={onSwitch}>Log in</a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---- Connect Telegram button (sized like Sign In) ----
-function loadTelegramWidget() {
-  if (window.__vsTgWidgetLoading) return window.__vsTgWidgetLoading;
-  window.__vsTgWidgetLoading = new Promise((resolve) => {
-    if (window.Telegram && window.Telegram.Login) return resolve();
-    const s = document.createElement("script");
-    s.async = true;
-    s.src = "https://telegram.org/js/telegram-widget.js?22";
-    s.onload = () => resolve();
-    s.onerror = () => resolve();
-    document.head.appendChild(s);
-  });
-  return window.__vsTgWidgetLoading;
-}
-function TelegramButton({ onConnected }) {
-  const [busy, setBusy] = useState(false);
-  const [cfg, setCfg] = useState(null);
-  useEffect(() => {
-    loadTelegramWidget();
-    fetch("/api/auth/config").then((r) => r.json())
-      .then((d) => { if (d.telegram && d.telegram.bot_id) setCfg(d.telegram); })
-      .catch(() => {});
-  }, []);
-  async function finish(payload) {
-    try {
-      const r = await fetch("/api/auth/telegram", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await r.json();
-      if (r.ok) onConnected(data.user);
-      else alert((data && data.error) || "Telegram link failed.");
-    } catch { alert("Network error."); }
-    setBusy(false);
-  }
-  async function connect() {
-    await loadTelegramWidget();
-    if (cfg && cfg.bot_id && window.Telegram && window.Telegram.Login) {
-      setBusy(true);
-      window.Telegram.Login.auth({ bot_id: cfg.bot_id, request_access: true },
-        (user) => { if (user) finish(user); else setBusy(false); });
-    } else {
-      alert("Connexion Telegram indisponible : le bot n'est pas configuré (BOT_TOKEN + domaine dans BotFather).");
-    }
-  }
-  return (
-    <button className="tg-btn" onClick={connect} disabled={busy}>
-      <TelegramIcon />
-      {busy ? "Connecting…" : "Connect Telegram"}
-    </button>
-  );
-}
-
-// ---- Rank card button (compact header version of new/versus-rank-card) ----
-function RankCardButton({ user }) {
-  const name = (user.telegram && user.telegram.username && "@" + user.telegram.username) || user.name || "@you";
-  return (
-    <button className="rc-btn" type="button" aria-label={"Open " + name + " profile"}>
-      <div className="rc-avatar" aria-hidden="true"><div className="h"></div><div className="b"></div></div>
-      <div style={{ textAlign: "left", minWidth: 0 }}>
-        <div className="rc-name">{name}</div>
-        <div className="rc-stats">
-          <div className="rc-stat"><strong className="rc-blue">48</strong><p>scans</p></div>
-          <div className="rc-line"></div>
-          <div className="rc-stat"><strong className="rc-green">31</strong><p>wins</p></div>
-          <div className="rc-line"></div>
-          <div className="rc-stat"><strong className="rc-red">17</strong><p>defeats</p></div>
-        </div>
-      </div>
-      <div className="rc-arrow" aria-hidden="true">→</div>
-    </button>
-  );
-}
-
 export default function Versus() {
   useGlobalZoom();
   const [groupTime, setGroupTime] = useState("1h");
   const [tickerTime, setTickerTime] = useState("12h");
   const [lbCollapsed, setLbCollapsed] = useState(false);
-  const [user, setUser] = useState(() => apiGet("/api/auth/me")?.user ?? null);
-  const [authModal, setAuthModal] = useState(null); // "login" | "signup" | null
   const [tokenImgs, setTokenImgs] = useState({}); // addr -> { img, twitter, telegram }
   const [lbLg, setLbLg] = useState(typeof window !== "undefined" && window.matchMedia("(min-width:1024px)").matches);
-  useEffect(() => {
-    apiFetch("/api/auth/me").then(d => setUser(d.user)).catch(() => {});
-  }, []);
   useEffect(() => {
     const mq = window.matchMedia("(min-width:1024px)");
     const on = () => setLbLg(mq.matches);
@@ -624,7 +408,7 @@ export default function Versus() {
     if (lbTopRef.current) setLbTop(lbTopRef.current.offsetHeight);
   }, [groups]);
 
-  // Lignes du leaderboard latéral
+  // Lignes du leaderboard latÃ©ral
   const lbRows = useMemo(() => (groupsStats?.data || []).map((g, i) => {
     const calls = g.total_members || 0;
     const avg = calls > 0 ? (g.total_current_stat || 0) / calls : 0;
@@ -692,24 +476,13 @@ export default function Versus() {
           <div className="flex-1 max-w-xl mx-auto hidden sm:block">
             <VsSearch />
           </div>
-          <div className="flex items-center gap-3">
-            {!user ? (
-              <>
-                <button onClick={() => setAuthModal("login")} className="text-sm px-4 py-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition">Sign In</button>
-                <button onClick={() => setAuthModal("signup")} className="text-sm px-4 py-2 rounded-full bg-white text-black font-semibold hover:bg-zinc-200 transition">Sign Up</button>
-              </>
-            ) : !user.telegram ? (
-              <TelegramButton onConnected={(u) => { setUser(u); apiSet("/api/auth/me", { user: u }); }} />
-            ) : (
-              <RankCardButton user={user} />
-            )}
-          </div>
+          <AuthCorner />
           </div>
         </header>
 
         <div className="border-y border-white/5 pl-6 pr-4 sm:pr-6 lg:pr-10 xl:pr-16 2xl:pr-24 py-3">
           <div className="w-full flex items-center gap-5 overflow-x-auto no-scrollbar">
-            <span className="text-sm text-zinc-400 shrink-0 flex items-center gap-2">Groups <span className="text-zinc-600">⧉</span></span>
+            <span className="text-sm text-zinc-400 shrink-0 flex items-center gap-2">Groups <span className="text-zinc-600">â§‰</span></span>
             {groups.map((g, i) => {
               const StripTag = g.id ? Link : "a";
               return (
@@ -787,19 +560,11 @@ export default function Versus() {
             projects featured on the platform.
             </p>
           </div>
-          <p className="shrink-0">© 2026 Versus. All rights reserved.</p>
+          <p className="shrink-0">Â© 2026 Versus. All rights reserved.</p>
           </div>
         </footer>
         </div>
       </div>
-      {authModal === "login" && (
-        <LoginModal onClose={() => setAuthModal(null)} onSwitch={() => setAuthModal("signup")}
-          onAuthed={(u) => { setUser(u); apiSet("/api/auth/me", { user: u }); setAuthModal(null); }} />
-      )}
-      {authModal === "signup" && (
-        <SignupModal onClose={() => setAuthModal(null)} onSwitch={() => setAuthModal("login")}
-          onAuthed={(u) => { setUser(u); apiSet("/api/auth/me", { user: u }); setAuthModal(null); }} />
-      )}
     </div>
   );
 }
