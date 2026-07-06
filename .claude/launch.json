@@ -7,6 +7,14 @@
       "runtimeArgs": ["server.py"],
       "cwd": "Projects/luckyenatiServer",
       "port": 5000
+    },
+    {
+      "name": "versus-site",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "Projects/luckyenatisite",
+      "port": 5173,
+      "autoPort": false
     }
   ]
 }

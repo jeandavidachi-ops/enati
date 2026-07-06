@@ -1,0 +1,364 @@
+import React, { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
+import VsSearch from '../components/VsSearch.jsx'
+import AuthCorner from '../components/AuthCorner.jsx'
+import useGlobalZoom from '../hooks/useGlobalZoom.js'
+
+const GRADS = [
+  "from-lime-600 via-emerald-700 to-stone-800","from-sky-400 via-blue-500 to-amber-700",
+  "from-green-400 via-emerald-500 to-fuchsia-700","from-slate-500 via-slate-700 to-zinc-900",
+  "from-purple-600 to-indigo-800","from-orange-600 to-red-800",
+  "from-pink-600 to-rose-900","from-cyan-600 to-blue-900",
+];
+const EMOJIS = ["⚔️","🚀","🔥","💎","🐍","👑","🦅","🪙","🛡️","🐱","₿","🎯"];
+const gradOf = (i) => GRADS[Math.abs(i) % GRADS.length];
+const emojiOf = (i) => EMOJIS[Math.abs(i) % EMOJIS.length];
+
+const SearchIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+    <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+const XIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
+  </svg>
+);
+const TelegramIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0Zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635Z" />
+  </svg>
+);
+
+const TIMES = ["1h", "2h", "12h", "1d", "7d"];
+function TimeTabs() {
+  const [v, setV] = useState("1h");
+  return (
+    <div className="flex items-center gap-1 font-mono text-sm">
+      {TIMES.map((t) => (
+        <button key={t} onClick={() => setV(t)}
+          className={"px-3 py-1 rounded-md transition-colors " + (v === t ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300")}>
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Avatar({ src, g, e, className }) {
+  const [err, setErr] = useState(false);
+  const url = (src && !err) ? src : "/images/versus.png";
+  return <img src={url} onError={() => setErr(true)} className={"shrink-0 object-cover bg-zinc-800 " + className} />;
+}
+function Socials() {
+  return (
+    <div className="flex items-center gap-3 text-zinc-500">
+      <XIcon className="w-3.5 h-3.5 hover:text-white cursor-pointer" />
+      <TelegramIcon className="w-4 h-4 hover:text-white cursor-pointer" />
+    </div>
+  );
+}
+
+const HEX_CLIP = "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)";
+const NOISE_URL = "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"140\" height=\"140\"><filter id=\"n\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"0.8\" numOctaves=\"2\" stitchTiles=\"stitch\"/></filter><rect width=\"100%\" height=\"100%\" filter=\"url(%23n)\"/></svg>')";
+const POD_CFG = {
+  1: {
+    glow: "rgba(245,196,75,0.32)",
+    badge: "linear-gradient(165deg, #FFEBAC 0%, #F7C858 38%, #E2A93C 60%, #B57512 100%)",
+    badgeRing: "rgba(120,72,12,0.55)", badgeInset: "rgba(120,66,8,0.55)",
+    rankColor: "#2a1c06", crown: "#7a5212",
+    cardBg: "radial-gradient(125% 105% at 50% 30%, #443a22 0%, #2a2415 52%, #14110a 100%)",
+    cardBorder: "rgba(245,196,75,0.3)", cardGlow: "rgba(245,196,75,0.22)",
+    sheen: "rgba(255,244,214,0.12)", leak: "rgba(245,196,75,0.26)",
+    embers: "radial-gradient(circle at 30% 88%, rgba(255,170,60,0.5) 0.5px, transparent 2px), radial-gradient(circle at 55% 94%, rgba(255,190,80,0.4) 0.5px, transparent 2px), radial-gradient(circle at 72% 86%, rgba(255,160,50,0.45) 0.5px, transparent 2px), radial-gradient(circle at 45% 80%, rgba(255,200,90,0.35) 0.5px, transparent 1.5px)",
+    avatar: "radial-gradient(120% 120% at 50% 20%, #FFF0C4 0%, #E6B84F 44%, #8a5d16 100%)",
+    avatarRing: "rgba(245,196,75,0.5)",
+  },
+  2: {
+    glow: "rgba(206,213,224,0.32)",
+    badge: "linear-gradient(165deg, #FCFDFF 0%, #D2D8E0 38%, #A7AEBA 60%, #757C88 100%)",
+    badgeRing: "rgba(70,78,90,0.55)", badgeInset: "rgba(70,78,90,0.5)",
+    rankColor: "#242830", crown: null,
+    cardBg: "radial-gradient(125% 105% at 50% 30%, #333942 0%, #20242b 52%, #101317 100%)",
+    cardBorder: "rgba(206,213,224,0.3)", cardGlow: "rgba(206,213,224,0.22)",
+    sheen: "rgba(226,232,240,0.12)", leak: "rgba(206,213,224,0.26)",
+    embers: "radial-gradient(circle at 30% 88%, rgba(214,226,244,0.5) 0.5px, transparent 2px), radial-gradient(circle at 55% 94%, rgba(190,204,226,0.42) 0.5px, transparent 2px), radial-gradient(circle at 72% 86%, rgba(206,220,240,0.45) 0.5px, transparent 2px), radial-gradient(circle at 45% 80%, rgba(224,232,246,0.38) 0.5px, transparent 1.5px)",
+    avatar: "radial-gradient(120% 120% at 50% 20%, #eef1f6 0%, #aab2be 44%, #5b626d 100%)",
+    avatarRing: "rgba(206,213,224,0.55)",
+  },
+  3: {
+    glow: "rgba(208,139,82,0.32)",
+    badge: "linear-gradient(165deg, #F3C79A 0%, #D08B52 38%, #B06A34 60%, #7E4620 100%)",
+    badgeRing: "rgba(90,50,22,0.55)", badgeInset: "rgba(90,48,20,0.55)",
+    rankColor: "#2a1608", crown: null,
+    cardBg: "radial-gradient(120% 100% at 50% 112%, #1e1509 0%, #0e0b08 56%, #070609 100%)",
+    cardBorder: "rgba(208,139,82,0.3)", cardGlow: "rgba(208,139,82,0.22)",
+    sheen: "rgba(255,232,208,0.12)", leak: "rgba(208,139,82,0.28)",
+    embers: "radial-gradient(circle at 30% 88%, rgba(255,150,80,0.5) 0.5px, transparent 2px), radial-gradient(circle at 55% 94%, rgba(255,170,100,0.4) 0.5px, transparent 2px), radial-gradient(circle at 72% 86%, rgba(250,140,70,0.45) 0.5px, transparent 2px), radial-gradient(circle at 45% 80%, rgba(255,180,110,0.35) 0.5px, transparent 1.5px)",
+    avatar: "radial-gradient(120% 120% at 50% 20%, #F7DBB8 0%, #CB8552 44%, #713e1d 100%)",
+    avatarRing: "rgba(208,139,82,0.55)",
+  },
+};
+
+function PodAvatar({ d, e, style }) {
+  const [err, setErr] = useState(false);
+  const src = d ? d.img : null;
+  return (
+    <div style={style} className="relative overflow-hidden flex items-center justify-center">
+      <img src={(src && !err) ? src : "/images/versus.png"} onError={() => setErr(true)} className="absolute inset-0 w-full h-full object-cover" />
+      <div className="absolute inset-0" style={{ background: "radial-gradient(60% 42% at 50% 16%, rgba(255,255,255,0.34), transparent 60%)" }} />
+    </div>
+  );
+}
+
+function Podium({ d, rank }) {
+  const c = POD_CFG[rank];
+  const isGold = rank === 1;
+  // Fluid sizes: scale up on large screens, shrink on mobile (no overflow).
+  const badgeSize = "clamp(46px, 5vw, 92px)";
+  const glowTop = isGold ? "clamp(-46px, -3.6vw, -38px)" : "clamp(-34px, -2.6vw, -28px)";
+  const badgeTop = isGold ? "clamp(-38px, -3vw, -30px)" : "clamp(-26px, -2.2vw, -20px)";
+  // gold sits slightly higher: push #2 and #3 down
+  const wrapStyle = { marginTop: isGold ? 0 : "clamp(16px, 2vw, 30px)" };
+  const ov = { position: "absolute", inset: 0, pointerEvents: "none", borderRadius: "inherit" };
+  const hasLink = d && d.id;
+  const CardTag = hasLink ? Link : "a";
+  return (
+    <div className="flex-1 relative min-w-0" style={wrapStyle}>
+      {/* rank badge */}
+      <div style={{ position: "absolute", top: badgeTop, left: "50%", transform: "translateX(-50%)", width: badgeSize, height: badgeSize, zIndex: 6 }}>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: MONO, fontWeight: 800, fontSize: "clamp(24px, 3vw, 44px)", backgroundImage: c.badge, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", zIndex: 2 }}>{rank}</div>
+      </div>
+
+      {/* card */}
+      <CardTag {...(hasLink ? { to: "/group/" + d.id } : {})} style={{ display: "block", position: "relative", marginTop: "clamp(24px, 2.6vw, 48px)", borderRadius: "clamp(16px, 1.8vw, 26px)", overflow: "hidden", padding: "clamp(26px, 3.2vw, 52px) clamp(12px, 1.6vw, 26px) clamp(16px, 1.8vw, 30px)", background: c.cardBg, border: `1px solid ${c.cardBorder}`, boxShadow: `0 40px 80px -34px rgba(0,0,0,0.95), 0 0 44px -12px ${c.cardGlow}, inset 0 1px 0 rgba(255,240,210,0.06)`, cursor: hasLink ? "pointer" : "default" }}>
+        <div style={{ ...ov, background: `linear-gradient(180deg, ${c.sheen} 0%, transparent 26%)` }} />
+        <div style={{ ...ov, background: `radial-gradient(90% 60% at 50% 118%, ${c.leak} 0%, transparent 64%)` }} />
+        <div style={{ ...ov, backgroundImage: c.embers }} />
+        <div style={{ ...ov, opacity: 0.5, mixBlendMode: "overlay", backgroundImage: NOISE_URL }} />
+        <div style={{ ...ov, background: "radial-gradient(140% 130% at 50% 40%, transparent 62%, rgba(0,0,0,0.42) 100%)" }} />
+
+        <div style={{ position: "relative", zIndex: 3, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <PodAvatar d={d} e={emojiOf(rank)} style={{ width: "min(150px, 62%)", aspectRatio: "1", borderRadius: "18%", background: c.avatar, boxShadow: `0 0 0 1px ${c.avatarRing}, 0 12px 24px rgba(0,0,0,0.55), inset 0 2px 8px rgba(255,255,255,0.28), inset 0 -12px 20px rgba(0,0,0,0.42)` }} />
+          <div className="mt-3 font-mono font-semibold text-white text-center truncate w-full" style={{ fontSize: isGold ? "clamp(15px, 1.5vw, 24px)" : "clamp(14px, 1.4vw, 22px)" }}>
+            {d ? d.name : "—"}
+          </div>
+        </div>
+      </CardTag>
+    </div>
+  );
+}
+const TABLE_COLS = "70px minmax(190px,2.1fr) 1fr 1.2fr 1.45fr 1.05fr 0.95fr 96px";
+const MONO = "'Geist Pixel', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+const THS = { fontFamily: MONO, fontSize: "clamp(12px,0.85vw,15px)", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap", color: "#797d84" };
+const VAL = { fontFamily: MONO, fontWeight: 500, fontSize: "clamp(16px,1.05vw,20px)", fontVariantNumeric: "tabular-nums" };
+function Th({ children, className = "" }) {
+  return <th className={"text-left text-[11px] font-mono font-normal text-zinc-500 uppercase tracking-wider py-3 " + className}>{children}</th>;
+}
+function Td({ children, className = "" }) {
+  return <td className={"py-4 font-mono text-sm " + className}>{children}</td>;
+}
+
+// ---- Leaderboard sidebar (vrais groupes) ----
+function LbMedal({ rank }) {
+  if (rank === "1") return <div className="medal"><span>1</span></div>;
+  if (rank === "2") return <div className="medal silver"><span>2</span></div>;
+  if (rank === "3") return <div className="medal bronze"><span>3</span></div>;
+  return <div className="place">{rank}.</div>;
+}
+function LeaderboardSidebar({ collapsed, onToggle, rows = [] }) {
+  if (collapsed) {
+    return (
+      <div className="lb-rail">
+        <button onClick={onToggle} title="Ouvrir le menu">≫</button>
+      </div>
+    );
+  }
+  return (
+    <aside className="lb-side">
+      <section className="panel">
+        <header className="tabs">
+          <nav className="tab-nav">
+            <a className="tab alert" href="#"><span className="dot"></span><span className="bell">●</span> Alerts</a>
+            <a className="tab" href="#">Tokens</a>
+            <a className="tab active" href="#">Leaderboard</a>
+            <a className="tab" href="#">Feed</a>
+          </nav>
+          <button className="collapse" onClick={onToggle} title="Replier le menu">≪</button>
+        </header>
+        <div className="content">
+          <div className="filters">
+            <button>24H</button>
+            <button>7D</button>
+            <button>30D</button>
+            <button className="selected">ALL</button>
+          </div>
+          <div className="your-rank">
+            <div className="rank-avatar logo">∞</div>
+            <div>
+              <div className="muted">Your rank</div>
+              <div className="rankline"><span>#</span> -</div>
+            </div>
+            <div className="pnl-head">
+              <div>PnL</div>
+              <strong>--</strong>
+            </div>
+          </div>
+          <div className="dash"></div>
+          <div className="rows">
+            {rows.map((row, i) => (
+              <div className="row" key={row.id != null ? row.id : i}>
+                <LbMedal rank={String(i + 1)} />
+                <Avatar src={row.img} g={row.g} e={row.e} className="avatar" />
+                <div className="user"><strong>{row.name}</strong></div>
+                <div className="right"><div className="pnl">$0</div></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </aside>
+  );
+}
+
+export default function App() {
+  useGlobalZoom();
+  const [rows, setRows] = useState([]);
+  const [lbCollapsed, setLbCollapsed] = useState(false);
+  const [lbLg, setLbLg] = useState(typeof window !== "undefined" && window.matchMedia("(min-width:1024px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width:1024px)");
+    const on = () => setLbLg(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  const lbPad = lbLg ? (lbCollapsed ? 44 : 300) : 0;
+  const lbTopRef = useRef(null);
+  const [lbTop, setLbTop] = useState(0);
+  useEffect(() => {
+    const el = lbTopRef.current;
+    if (!el) return;
+    const measure = () => setLbTop(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => { ro.disconnect(); window.removeEventListener("resize", measure); };
+  }, []);
+  useEffect(() => {
+    fetch("/api/all-groups-stats").then(r => r.json()).then(res => {
+      const data = (res.data || []).map((g, i) => {
+        const calls = g.total_members || 0;
+        const avg = calls > 0 ? (g.total_current_stat || 0) / calls : 0;
+        return {
+          id: g.group_id,
+          name: g.group_name || "Unknown",
+          win: Math.round(g.win_rate || 0),
+          avg: avg.toFixed(1),
+          high: g.max_current_stat || 0,
+          calls: calls,
+          duels: g.total_wins || 0,
+          img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
+          g: gradOf(i), e: emojiOf(i),
+        };
+      });
+      setRows(data);
+    }).catch(() => {});
+  }, []);
+  const top3 = rows.slice(0, 3);
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
+      <div className="flex flex-col flex-1 bg-[#0b0b0c]">
+        <div ref={lbTopRef} className="sticky top-0 z-50 bg-[#0b0b0c]">
+        <header className="pl-6 pr-4 sm:pr-6 lg:pr-10 xl:pr-16 2xl:pr-24 py-5">
+          <div className="w-full flex items-center gap-6">
+          <Link to="/" style={{ fontFamily: "Arial, Helvetica, sans-serif" }} className="text-2xl font-semibold tracking-[0.15em] italic select-none text-zinc-300">VERSUS</Link>
+          <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-300">
+            <Link className="hover:text-white" to="/ticker">Tickers</Link>
+            <Link className="hover:text-white" to="/group">Groups</Link>
+            <Link className="text-white" to="/leaderboard">Leaderboard</Link>
+            <span className="flex items-center gap-2">
+              <span className="text-zinc-300">Duels</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded border border-lime-400/60 text-lime-400 font-semibold">SOON</span>
+            </span>
+          </nav>
+          <div className="flex-1 max-w-xl mx-auto hidden sm:block">
+            <div className="flex items-center gap-2 rounded-xl bg-zinc-900 ring-1 ring-white/10 px-3 py-2 text-zinc-400">
+              <SearchIcon className="w-4 h-4" />
+              <input placeholder="Search groups or tickers" className="bg-transparent outline-none text-sm flex-1 placeholder-zinc-500" />
+            </div>
+          </div>
+          <AuthCorner />
+          </div>
+        </header>
+        </div>
+
+        <div className="flex-1 flex flex-col">
+        <main className="pl-6 pr-4 sm:pr-6 lg:pr-10 xl:pr-16 2xl:pr-24 py-8">
+          <div className="max-w-[clamp(960px,72vw,1400px)] mx-auto w-full">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-bold">Leaderboard</h1>
+              <div className="w-56"><VsSearch placeholder="Search" /></div>
+            </div>
+            <TimeTabs />
+          </div>
+
+          <div className="flex items-start gap-3 sm:gap-4 mt-8 w-full" style={{ perspective: "1200px" }}>
+            <Podium d={top3[1]} rank={2} />
+            <Podium d={top3[0]} rank={1} />
+            <Podium d={top3[2]} rank={3} />
+          </div>
+
+          <div className="mt-12 overflow-x-auto">
+            <div style={{ minWidth: 860, borderRadius: 16, overflow: "hidden", background: "#0b0b0c" }}>
+              {/* header */}
+              <div style={{ display: "grid", gridTemplateColumns: TABLE_COLS, alignItems: "center", gap: 14, padding: "clamp(18px,1.6vw,28px) clamp(16px,3vw,28px) 13px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                <span style={{ ...THS, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>Position <span style={{ fontSize: 11 }}>↓</span></span>
+                <span style={{ ...THS, paddingLeft: 52 }}>Group</span>
+                <span style={THS}>Win Rate</span>
+                <span style={THS}>Avg. Multiplier</span>
+                <span style={THS}>Highest Multiplier</span>
+                <span style={THS}>Total Calls</span>
+                <span style={THS}>Duels Won</span>
+                <span style={{ ...THS, textAlign: "center" }}>Socials</span>
+              </div>
+              {/* rows */}
+              {rows.map((d, i) => {
+                const rank = i + 1;
+                const rankColor = rank === 1 ? "#F2B23A" : rank === 3 ? "#E9843C" : "#ededf0";
+                const RowTag = d.id ? Link : "a";
+                return (
+                  <div key={i} className="hover:bg-white/[0.02]" style={{ display: "grid", gridTemplateColumns: TABLE_COLS, alignItems: "center", gap: 14, padding: "clamp(14px,1.1vw,22px) clamp(16px,3vw,28px)", transition: "background .15s" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ ...VAL, fontWeight: 700, fontSize: "clamp(18px,1.2vw,24px)", color: rankColor }}>{rank}</span>
+                    </div>
+                    <RowTag {...(d.id ? { to: "/group/" + d.id } : {})} className={"flex items-center gap-3 min-w-0" + (d.id ? " cursor-pointer group/row" : "")}>
+                      <Avatar src={d.img} g={d.g} e={d.e} className="w-[clamp(40px,3vw,56px)] h-[clamp(40px,3vw,56px)] rounded-[11px] text-lg shrink-0" />
+                      <span className="truncate group-hover/row:underline" style={{ fontFamily: MONO, fontSize: "clamp(15px,1vw,19px)", fontWeight: 600, letterSpacing: "-0.012em", color: "#F5F5F5" }}>{d.name}</span>
+                    </RowTag>
+                    <span style={{ ...VAL, fontWeight: 600, color: "#3fd35f" }}>{d.win}%</span>
+                    <span style={{ ...VAL, color: "#eceef0" }}>{d.avg}x</span>
+                    <span style={{ ...VAL, fontWeight: 600, color: "#F2B23A" }}>{d.high}x</span>
+                    <span style={{ ...VAL, color: "#eceef0" }}>{d.calls}</span>
+                    <span style={{ ...VAL, color: "#eceef0" }}>{d.duels}</span>
+                    <div style={{ display: "flex", gap: 16, justifyContent: "center", alignItems: "center" }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="#eceef0" className="cursor-pointer hover:!fill-white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" /></svg>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="#eceef0" className="cursor-pointer hover:!fill-white"><path d="M21.94 4.3 18.9 19.04c-.23 1.01-.83 1.26-1.68.78l-4.64-3.42-2.24 2.15c-.25.25-.46.46-.93.46l.33-4.72L18.66 6.3c.37-.33-.08-.51-.58-.18L5.5 14.07l-4.57-1.43c-.99-.31-1.01-.99.21-1.47L20.66 2.9c.83-.31 1.55.19 1.28 1.4Z" /></svg>
+                    </div>
+                  </div>
+                );
+              })}
+              {rows.length === 0 && (
+                <div className="py-8 text-center text-zinc-600 text-sm">No groups yet.</div>
+              )}
+            </div>
+          </div>
+          </div>
+        </main>
+        </div>
+      </div>
+    </div>
+  );
+}

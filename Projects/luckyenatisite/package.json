@@ -1,22 +1,21 @@
 {
-  "name": "mdbhsite",
-  "version": "1.0.0",
-  "description": "Minimal Node.js site with a home page and CSS",
-  "main": "src/server.js",
+  "name": "versus-site",
+  "version": "2.0.0",
+  "description": "Versus — SPA React (Vite + React Router)",
+  "private": true,
+  "type": "module",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
-    "express": "^4.19.2",
-    "cors": "^2.8.5"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.26.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.8"
   }
 }
-
-

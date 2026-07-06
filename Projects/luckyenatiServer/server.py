@@ -22,8 +22,10 @@ load_dotenv(Path(__file__).resolve().parent / '.env')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Le frontend (pages + assets) est dans le dossier voisin luckyenatisite/public.
-PUBLIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'luckyenatisite', 'public')
+# Le frontend est desormais une SPA React (Vite). En prod, Flask sert le build
+# (luckyenatisite/dist) ; toutes les routes de pages renvoient index.html et le
+# routing est fait cote client par React Router.
+PUBLIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'luckyenatisite', 'dist')
 
 app = Flask(__name__, static_folder=PUBLIC_DIR, static_url_path='')
 
@@ -33,28 +35,15 @@ def home():
     return app.send_static_file('index.html')
 
 
-@app.route('/leaderboards')
-@app.route('/leaderboard')
-def leaderboards_page():
-    return app.send_static_file('leaderboards.html')
-
-
-@app.route('/group')
-@app.route('/ticker')
-def explore_page():
-    return app.send_static_file('explore.html')
-
-
-@app.route('/group/<group_id>')
-def group_profile_page(group_id):
-    # Page de profil d'un groupe (le group_id est lu cote client depuis l'URL).
-    return app.send_static_file('group.html')
-
-
-@app.route('/ticker/<path:address>')
-def token_page(address):
-    # Page d'un token (le contract address est lu cote client depuis l'URL).
-    return app.send_static_file('token.html')
+# Fallback SPA : toute route de page (inconnue de Flask et sans fichier statique
+# correspondant) renvoie index.html pour que React Router prenne le relais.
+# Les chemins /api/* et /health gardent un vrai 404 JSON.
+@app.errorhandler(404)
+def spa_fallback(e):
+    path = request.path or ''
+    if path.startswith('/api/') or path.startswith('/health'):
+        return jsonify({'success': False, 'error': 'not_found'}), 404
+    return app.send_static_file('index.html')
 
 
 # MongoDB connection setup

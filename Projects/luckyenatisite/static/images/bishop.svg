@@ -1,0 +1,38 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Chess Bishop - Black outline on white background -->
+  <!-- Base -->
+  <ellipse cx="100" cy="180" rx="40" ry="15" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Main body -->
+  <path d="M60 180 L70 140 Q80 120 100 115 Q120 120 130 140 L140 180 Z" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Upper body -->
+  <path d="M70 140 L80 100 Q90 80 100 75 Q110 80 120 100 L130 140 Z" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Neck -->
+  <rect x="85" y="75" width="30" height="25" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Head -->
+  <ellipse cx="100" cy="70" rx="25" ry="18" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Mitre base -->
+  <rect x="75" y="55" width="50" height="10" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Mitre points -->
+  <path d="M75 55 L80 30 L85 55 Z" fill="white" stroke="black" stroke-width="4"/>
+  <path d="M85 55 L90 25 L95 55 Z" fill="white" stroke="black" stroke-width="4"/>
+  <path d="M95 55 L100 20 L105 55 Z" fill="white" stroke="black" stroke-width="4"/>
+  <path d="M105 55 L110 25 L115 55 Z" fill="white" stroke="black" stroke-width="4"/>
+  <path d="M115 55 L120 30 L125 55 Z" fill="white" stroke="black" stroke-width="4"/>
+  
+  <!-- Cross -->
+  <rect x="96" y="10" width="8" height="20" fill="black" stroke="black" stroke-width="2"/>
+  <rect x="88" y="22" width="24" height="8" fill="black" stroke="black" stroke-width="2"/>
+  
+  <!-- Cross details -->
+  <rect x="98" y="12" width="4" height="16" fill="white"/>
+  <rect x="90" y="24" width="20" height="4" fill="white"/>
+  
+  <!-- Slit -->
+  <rect x="90" y="60" width="20" height="15" fill="black" stroke="black" stroke-width="2"/>
+</svg>
