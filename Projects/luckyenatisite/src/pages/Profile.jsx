@@ -7,11 +7,11 @@ const HTML = `
 
   <div style="grid-column:1 / -1; width:100%; background:#101314; border:1px solid #24282c; border-radius:8px; padding:22px 28px; display:flex; align-items:center; gap:20px;">
     <div style="width:68px; height:68px; border-radius:50%; flex-shrink:0; background:radial-gradient(circle at 50% 40%,#1b2022,#0d1011);"></div>
-    <div>
+    <div style="min-width:0;">
       <div style="font-size:24px; font-weight:700; color:#ffffff; letter-spacing:-0.01em; line-height:1;">ZERO</div>
       <div style="font-size:14px; color:#7a8085; margin-top:6px;">@straighttozero</div>
-      <div style="font-size:14px; color:#b4b9bd; margin-top:12px; white-space:nowrap;">Roll the dice with conviction then roll once more</div>
-      <div style="display:flex; align-items:center; gap:20px; margin-top:14px; white-space:nowrap;">
+      <div style="font-size:14px; color:#b4b9bd; margin-top:12px;">Roll the dice with conviction then roll once more</div>
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:20px; margin-top:14px;">
         <div style="display:flex; align-items:center; gap:7px; font-size:13px; color:#7a8085;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#7a8085" stroke-width="1.6"/><path d="M12 7v5l3 2" stroke="#7a8085" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>10h 48m ago</div>
         <div style="display:flex; align-items:center; gap:7px; font-size:13px; color:#7a8085;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.4" stroke="#7a8085" stroke-width="1.6"/><circle cx="12" cy="12" r="3.2" stroke="#7a8085" stroke-width="1.6"/><path d="M12 1.6V4M12 20v2.4M1.6 12H4M20 12h2.4" stroke="#7a8085" stroke-width="1.6" stroke-linecap="round"/></svg>4 scans</div>
         <div style="display:flex; align-items:center; gap:7px; font-size:13px; color:#7a8085;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="4.5" width="17" height="16" rx="2.2" stroke="#7a8085" stroke-width="1.6"/><path d="M3.5 9h17M8 3v3M16 3v3" stroke="#7a8085" stroke-width="1.6" stroke-linecap="round"/></svg>Joined Jan 2026</div>
