@@ -1,6 +1,6 @@
 /* Coin auth partagé du header (porté depuis public/js/versus-auth.js).
    Boutons Sign In/Up -> Connect Telegram -> carte de rang, + modales via portal. */
-import React, { useState as vsUseState, useEffect as vsUseEffect } from 'react'
+import React, { useState as vsUseState, useEffect as vsUseEffect, useRef as vsUseRef } from 'react'
 import { createPortal } from 'react-dom'
 import { apiFetch, apiGet, apiSet } from '../lib/api.js'
 
@@ -82,6 +82,35 @@ import { apiFetch, apiGet, apiSet } from '../lib/api.js'
   .vs-rc-arrow{width:24px;height:24px;flex:0 0 24px;border-radius:50%;display:grid;place-items:center;
     border:1.5px solid rgba(255,255,255,.45);color:#fff;font-size:14px;line-height:1;box-shadow:inset 0 0 10px rgba(255,255,255,.04);animation:vs-rc-arrow 2.6s ease-in-out infinite}
   .vs-rc-btn:hover .vs-rc-arrow{animation:none;transform:translateX(2px)}
+  .vs-am-wrap{position:relative;display:inline-block}
+  .vs-am-menu{position:absolute;top:100%;right:0;margin-top:8px;width:100%;min-width:250px;z-index:90;
+    padding:8px;border:1px solid rgba(255,255,255,.21);border-radius:18px;
+    background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012)),#080a0d;
+    box-shadow:0 24px 60px -12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06);
+    font-family:'Inter',system-ui,sans-serif;animation:vs-in .22s cubic-bezier(.2,.8,.3,1) both}
+  .vs-am-menu::before{content:"";position:absolute;left:0;right:0;top:-10px;height:10px}
+  .vs-am-row{width:100%;min-height:44px;display:grid;grid-template-columns:34px 1px 1fr 18px;
+    align-items:center;gap:12px;padding:8px 12px;margin-bottom:6px;border:1px solid rgba(255,255,255,.13);
+    border-radius:13px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012));
+    color:#f5f6f8;text-decoration:none;cursor:pointer;font:inherit;text-align:left;
+    transition:transform .15s ease,background .15s ease,border-color .15s ease}
+  .vs-am-row:last-child{margin-bottom:0}
+  .vs-am-row:hover{transform:translateY(-1px);background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.24)}
+  .vs-am-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;
+    background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.025));
+    border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+  .vs-am-icon svg,.vs-am-chev svg{fill:none;stroke:#eceef2;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .vs-am-icon svg{width:17px;height:17px}
+  .vs-am-chev{display:grid;place-items:center;opacity:.7}
+  .vs-am-chev svg{width:15px;height:15px;stroke-width:2.5}
+  .vs-am-sep{width:1px;height:24px;background:rgba(255,255,255,.55);justify-self:center}
+  .vs-am-label{font-size:14px;font-weight:600;letter-spacing:-.01em;line-height:1}
+  .vs-am-danger{color:#ff533a;border-color:rgba(255,83,58,.24);
+    background:radial-gradient(circle at left,rgba(255,83,58,.12),transparent 40%),linear-gradient(180deg,rgba(255,83,58,.045),rgba(255,255,255,.01))}
+  .vs-am-danger:hover{border-color:rgba(255,83,58,.4);background:rgba(255,83,58,.1)}
+  .vs-am-danger .vs-am-icon{background:linear-gradient(180deg,rgba(255,83,58,.18),rgba(255,83,58,.055));border-color:rgba(255,83,58,.18)}
+  .vs-am-danger .vs-am-icon svg,.vs-am-danger .vs-am-chev svg{stroke:#ff533a}
+  .vs-am-danger .vs-am-sep{background:rgba(255,83,58,.6)}
   `
   var s = document.createElement('style')
   s.id = 'vs-auth-styles'
@@ -285,6 +314,56 @@ function VsRankCardButton({ user }) {
   )
 }
 
+const VsAmChevron = () => (
+  <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
+)
+
+// Ligne du menu compte : lien placeholder ou bouton (Log out).
+function VsAmRow({ danger, onClick, children, icon }) {
+  const Tag = onClick ? 'button' : 'a'
+  const extra = onClick ? { type: 'button', onClick } : { href: '#', onClick: (e) => e.preventDefault() }
+  return (
+    <Tag className={'vs-am-row' + (danger ? ' vs-am-danger' : '')} {...extra}>
+      <span className="vs-am-icon" aria-hidden="true">{icon}</span>
+      <span className="vs-am-sep" aria-hidden="true"></span>
+      <span className="vs-am-label">{children}</span>
+      <span className="vs-am-chev" aria-hidden="true"><VsAmChevron /></span>
+    </Tag>
+  )
+}
+
+// Bouton rank card + dropdown menu compte (ouvre au survol ET au clic).
+function VsAccountMenu({ user, onLogout }) {
+  const [open, setOpen] = vsUseState(false)
+  const wrapRef = vsUseRef(null)
+  const closeTimer = vsUseRef(null)
+  const cancelClose = () => { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null } }
+  const openNow = () => { cancelClose(); setOpen(true) }
+  const closeSoon = () => { cancelClose(); closeTimer.current = setTimeout(() => setOpen(false), 140) }
+  vsUseEffect(() => {
+    if (!open) return
+    const onDown = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+  vsUseEffect(() => cancelClose, [])
+  return (
+    <div className="vs-am-wrap" ref={wrapRef} onMouseEnter={openNow} onMouseLeave={closeSoon}>
+      <div onClick={() => setOpen((o) => !o)}>
+        <VsRankCardButton user={user} />
+      </div>
+      {open && (
+        <div className="vs-am-menu" role="menu">
+          <VsAmRow icon={<svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="7" r="4" /></svg>}>Your profile</VsAmRow>
+          <VsAmRow icon={<svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" /><circle cx="12" cy="12" r="3" /></svg>}>Manage account</VsAmRow>
+          <VsAmRow icon={<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>}>Your Groups</VsAmRow>
+          <VsAmRow danger onClick={() => { setOpen(false); onLogout() }} icon={<svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>}>Log out</VsAmRow>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* Drop-in pour le header. Gère son propre état auth + modales (portées vers body). */
 export default function AuthCorner() {
   const [user, setUser] = vsUseState(() => apiGet("/api/auth/me")?.user ?? null)
@@ -294,6 +373,11 @@ export default function AuthCorner() {
   }, [])
   // Applique un user authentifié + amorce le cache /api/auth/me (évite un état périmé au remount).
   const applyUser = (u) => { setUser(u); apiSet("/api/auth/me", { user: u }) }
+  // Déconnexion : POST direct (apiFetch est un GET mémoïsé), puis reset user + cache.
+  const logout = async () => {
+    try { await fetch("/api/auth/logout", { method: "POST" }) } catch {}
+    setUser(null); apiSet("/api/auth/me", { user: null })
+  }
   const modalEl = modal === "login" ? (
     <VsLoginModal onClose={() => setModal(null)} onSwitch={() => setModal("signup")} onAuthed={(u) => { applyUser(u); setModal(null) }} />
   ) : modal === "signup" ? (
@@ -309,7 +393,7 @@ export default function AuthCorner() {
       ) : !user.telegram ? (
         <VsTelegramButton onConnected={applyUser} />
       ) : (
-        <VsRankCardButton user={user} />
+        <VsAccountMenu user={user} onLogout={logout} />
       )}
       {modalEl && createPortal(modalEl, document.body)}
     </div>

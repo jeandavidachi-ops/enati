@@ -1,0 +1,149 @@
+* { box-sizing: border-box; }
+
+:root {
+  --bg: #030405;
+  --panel: #080a0d;
+  --row: rgba(255,255,255,.028);
+  --row-hover: rgba(255,255,255,.055);
+  --border: rgba(255,255,255,.13);
+  --border-strong: rgba(255,255,255,.21);
+  --text: #f5f6f8;
+  --muted: rgba(255,255,255,.72);
+  --danger: #ff533a;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(255,255,255,.045), transparent 32%),
+    #030405;
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.page {
+  width: min(920px, 100%);
+  padding: 40px 18px;
+}
+
+.menu-card {
+  width: 100%;
+  padding: 44px 40px;
+  border: 1px solid var(--border-strong);
+  border-radius: 38px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.012)),
+    var(--panel);
+  box-shadow: 0 24px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+.menu-row {
+  width: 100%;
+  min-height: 138px;
+  display: grid;
+  grid-template-columns: 100px 1px 1fr 42px;
+  align-items: center;
+  gap: 34px;
+  padding: 24px 32px;
+  margin-bottom: 30px;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.012));
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .18s ease, background .18s ease, border-color .18s ease;
+  font: inherit;
+}
+
+.menu-row:last-child { margin-bottom: 0; }
+
+.menu-row:hover {
+  transform: translateY(-2px);
+  background: var(--row-hover);
+  border-color: rgba(255,255,255,.24);
+}
+
+.icon-box {
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.025));
+  border: 1px solid rgba(255,255,255,.09);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.icon-box svg,
+.chevron svg {
+  width: 38px;
+  height: 38px;
+  fill: none;
+  stroke: #eceef2;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.divider {
+  width: 1px;
+  height: 64px;
+  background: rgba(255,255,255,.62);
+}
+
+.label {
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 650;
+  letter-spacing: -.04em;
+  line-height: 1;
+}
+
+.chevron {
+  display: grid;
+  place-items: center;
+  opacity: .86;
+}
+
+.chevron svg {
+  width: 44px;
+  height: 44px;
+  stroke-width: 2.6;
+}
+
+.danger {
+  color: var(--danger);
+  border-color: rgba(255,83,58,.24);
+  background:
+    radial-gradient(circle at left, rgba(255,83,58,.12), transparent 38%),
+    linear-gradient(180deg, rgba(255,83,58,.045), rgba(255,255,255,.01));
+}
+
+.danger .icon-box {
+  background: linear-gradient(180deg, rgba(255,83,58,.18), rgba(255,83,58,.055));
+  border-color: rgba(255,83,58,.18);
+}
+
+.danger .icon-box svg,
+.danger .chevron svg { stroke: var(--danger); }
+.danger .divider { background: rgba(255,83,58,.72); }
+
+@media (max-width: 680px) {
+  .menu-card { padding: 22px; border-radius: 28px; }
+  .menu-row {
+    min-height: 86px;
+    grid-template-columns: 56px 1px 1fr 28px;
+    gap: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 18px;
+  }
+  .icon-box { width: 56px; height: 56px; border-radius: 15px; }
+  .icon-box svg { width: 26px; height: 26px; }
+  .chevron svg { width: 30px; height: 30px; }
+  .divider { height: 40px; }
+  .label { font-size: 22px; }
+}
