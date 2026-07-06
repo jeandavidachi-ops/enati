@@ -343,11 +343,12 @@ export default function AuthCorner() {
   const logout = async () => {
     try { await fetch("/api/auth/logout", { method: "POST" }) } catch {}
     setUser(null); apiSet("/api/auth/me", { user: null })
+    window.location.reload()
   }
   const modalEl = modal === "login" ? (
-    <VsLoginModal onClose={() => setModal(null)} onSwitch={() => setModal("signup")} onAuthed={(u) => { applyUser(u); setModal(null) }} />
+    <VsLoginModal onClose={() => setModal(null)} onSwitch={() => setModal("signup")} onAuthed={(u) => { applyUser(u); setModal(null); window.location.reload() }} />
   ) : modal === "signup" ? (
-    <VsSignupModal onClose={() => setModal(null)} onSwitch={() => setModal("login")} onAuthed={(u) => { applyUser(u); setModal(null) }} />
+    <VsSignupModal onClose={() => setModal(null)} onSwitch={() => setModal("login")} onAuthed={(u) => { applyUser(u); setModal(null); window.location.reload() }} />
   ) : null
   return (
     <div className="flex items-center gap-3">

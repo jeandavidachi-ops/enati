@@ -42,6 +42,7 @@ export default function useTelegramConnect({ onConnected, onError } = {}) {
       if (r.ok) {
         apiSet('/api/auth/me', { user: data.user })
         onConnected && onConnected(data.user)
+        window.location.reload()
       } else {
         onError && onError((data && data.error) || 'Telegram link failed.')
       }
