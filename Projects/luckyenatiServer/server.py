@@ -30,9 +30,21 @@ PUBLIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'luc
 app = Flask(__name__, static_folder=PUBLIC_DIR, static_url_path='')
 
 
+INDEX_HTML = os.path.join(PUBLIC_DIR, 'index.html')
+
+
+def _serve_index():
+    """Renvoie le index.html de la SPA, ou un message clair (503) si le build
+    est absent — evite un 500 opaque quand `dist/` n'a pas ete genere."""
+    if not os.path.isfile(INDEX_HTML):
+        return ("Build du frontend introuvable (luckyenatisite/dist/index.html). "
+                "Lancez `npm run build` dans luckyenatisite/ (ou laissez le Dockerfile le faire)."), 503
+    return app.send_static_file('index.html')
+
+
 @app.route('/')
 def home():
-    return app.send_static_file('index.html')
+    return _serve_index()
 
 
 # Fallback SPA : toute route de page (inconnue de Flask et sans fichier statique
@@ -43,7 +55,7 @@ def spa_fallback(e):
     path = request.path or ''
     if path.startswith('/api/') or path.startswith('/health'):
         return jsonify({'success': False, 'error': 'not_found'}), 404
-    return app.send_static_file('index.html')
+    return _serve_index()
 
 
 # MongoDB connection setup
