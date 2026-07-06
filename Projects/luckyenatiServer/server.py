@@ -840,14 +840,15 @@ MEMBER_COUNT_TTL = 3600   # 1h
 JOIN_LINK_TTL = 3600      # 1h
 
 
-def _tg_get_chat_member(group_id, tg_id):
+def _tg_get_chat_member(group_id, tg_id, force=False):
     """Statut d'appartenance du user au groupe (via getChatMember), ou None si
-    indeterminable (bot absent du groupe, user inconnu, pas de token...)."""
+    indeterminable (bot absent du groupe, user inconnu, pas de token...).
+    force=True ignore le cache (re-verification a la demande, ex. retour d'onglet)."""
     if not BOT_TOKEN:
         return None
     key = (group_id, tg_id)
     cached = _chat_member_cache.get(key)
-    if cached and (time.time() - cached[1] < CHAT_MEMBER_TTL):
+    if not force and cached and (time.time() - cached[1] < CHAT_MEMBER_TTL):
         return cached[0]
     status = None
     try:
@@ -986,6 +987,7 @@ def refresh_my_groups():
     if tg_id is None:
         return user
 
+    force = request.args.get('force') in ('1', 'true', 'yes')
     stats = get_all_groups_stats().get('data', [])
     member_ids = set()
     members_by_gid = {}
@@ -993,7 +995,7 @@ def refresh_my_groups():
         gid = g.get('group_id')
         if gid is None:
             continue
-        status = _tg_get_chat_member(gid, tg_id)
+        status = _tg_get_chat_member(gid, tg_id, force=force)
         if status in _MEMBER_STATUSES:
             member_ids.add(gid)
             members_by_gid[gid] = _tg_member_count(gid)
@@ -1007,6 +1009,9 @@ def refresh_my_groups():
             upsert=True,
         )
     user_joined_groups.delete_many({'user_id': user['id'], 'group_id': {'$nin': list(member_ids)}})
+    # Un groupe devenu membre n'a plus de demande en attente -> on nettoie.
+    if member_ids:
+        group_join_requests.delete_many({'user_id': user['id'], 'group_id': {'$in': list(member_ids)}})
 
     return jsonify(_hydrate_my_groups(user, member_ids, members_by_gid))
 

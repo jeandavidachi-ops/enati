@@ -175,13 +175,27 @@ export default function YourGroups() {
 
   // Detecte en tache de fond les groupes nouvellement rejoints/quittes, sans
   // bloquer l'affichage. On memorise la version fraiche pour les prochains rendus.
+  // force=true ignore le cache serveur (5 min) : utile au retour sur l'onglet
+  // apres avoir rejoint un groupe dans Telegram.
   useEffect(() => {
     let alive = true
-    fetch('/api/my-groups/refresh')
-      .then((r) => r.json())
-      .then((d) => { if (alive && d && d.success) { setFresh(d); apiSet('/api/my-groups', d) } })
-      .catch(() => {})
-    return () => { alive = false }
+    const runRefresh = (force) => {
+      fetch('/api/my-groups/refresh' + (force ? '?force=1' : ''))
+        .then((r) => r.json())
+        .then((d) => { if (alive && d && d.success) { setFresh(d); apiSet('/api/my-groups', d) } })
+        .catch(() => {})
+    }
+    runRefresh(false)
+    // Au retour sur l'onglet (ex. apres avoir rejoint dans Telegram), on re-verifie
+    // l'appartenance sans le cache perime.
+    const onVisible = () => { if (document.visibilityState === 'visible') runRefresh(true) }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      alive = false
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
   }, [])
 
   const data = fresh || cached
