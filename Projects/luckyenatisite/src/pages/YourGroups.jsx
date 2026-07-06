@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageShell from '../components/shared/PageShell.jsx'
-import { useApi, apiInvalidate } from '../lib/api.js'
+import { useApi, apiInvalidate, apiSet } from '../lib/api.js'
 
 const CIRC = 144.5
 
@@ -62,39 +62,26 @@ function JoinedRow({ g, last }) {
   )
 }
 
-// Ligne d'un groupe disponible : bouton Join (lien si dispo, sinon desactive)
-// puis etat "Demande emise".
+// Ligne d'un groupe disponible : bouton Join/Request again (toujours actif).
+// Le lien de join est resolu au clic (POST request-join) -> chemin rapide sans
+// appel Telegram au chargement. Un re-clic renvoie la demande (ré-ouvre le lien).
 function AvailableRow({ g, last }) {
   const [requested, setRequested] = useState(!!g.requested)
   const [busy, setBusy] = useState(false)
+  const [noLink, setNoLink] = useState(false)
 
   async function requestJoin() {
     setBusy(true)
+    setNoLink(false)
     try {
       const r = await fetch(`/api/group/${g.group_id}/request-join`, { method: 'POST' })
       const data = await r.json()
       setRequested(true)
       apiInvalidate('/api/my-groups')
       if (data.join_link) window.open(data.join_link, '_blank', 'noopener')
+      else setNoLink(true)
     } catch { /* ignore */ }
     setBusy(false)
-  }
-
-  let action
-  if (requested) {
-    action = <span style={{ color: '#8b9599', fontSize: 13, fontWeight: 600 }}>Requested</span>
-  } else if (g.join_link) {
-    action = (
-      <button onClick={requestJoin} disabled={busy} style={{ height: 38, padding: '0 20px', border: '1px solid rgba(0,230,118,0.45)', background: 'transparent', borderRadius: 7, color: '#00e676', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-        {busy ? '…' : 'Join'}
-      </button>
-    )
-  } else {
-    action = (
-      <button disabled title="Link unavailable (bot is not an admin of this group)" style={{ height: 38, padding: '0 20px', border: '1px solid #253036', background: 'transparent', borderRadius: 7, color: '#545e62', fontSize: 14, fontWeight: 600, cursor: 'not-allowed', fontFamily: 'inherit' }}>
-        Join
-      </button>
-    )
   }
 
   return (
@@ -109,7 +96,12 @@ function AvailableRow({ g, last }) {
       <div style={{ color: '#00e676', fontSize: 15, fontWeight: 600 }}>{g.wins}</div>
       <div style={{ color: '#ff3b24', fontSize: 15, fontWeight: 600 }}>{g.defeats}</div>
       <div style={{ color: '#d3d9db', fontSize: 15, fontWeight: 500 }}>{g.calls}</div>
-      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>{action}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+        <button onClick={requestJoin} disabled={busy} style={{ height: 38, padding: '0 20px', border: '1px solid rgba(0,230,118,0.45)', background: 'transparent', borderRadius: 7, color: '#00e676', fontSize: 14, fontWeight: 600, cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit', opacity: busy ? 0.6 : 1 }}>
+          {busy ? '…' : (requested ? 'Request again' : 'Join')}
+        </button>
+        {noLink && <span style={{ color: '#8b9599', fontSize: 11 }}>No invite link available (bot not admin)</span>}
+      </div>
     </div>
   )
 }
@@ -157,12 +149,25 @@ function RequestsPlaceholder() {
 }
 
 export default function YourGroups() {
-  const data = useApi('/api/my-groups')
+  const cached = useApi('/api/my-groups')          // instantane (base)
+  const [fresh, setFresh] = useState(null)         // reconciliation de fond
   const [tab, setTab] = useState('joined')
 
+  // Detecte en tache de fond les groupes nouvellement rejoints/quittes, sans
+  // bloquer l'affichage. On memorise la version fraiche pour les prochains rendus.
+  useEffect(() => {
+    let alive = true
+    fetch('/api/my-groups/refresh')
+      .then((r) => r.json())
+      .then((d) => { if (alive && d && d.success) { setFresh(d); apiSet('/api/my-groups', d) } })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  const data = fresh || cached
   const joined = data?.joined || []
   const available = data?.available || []
-  const loading = data === undefined
+  const loading = cached === undefined && !fresh
   const notLinked = data && data.success === false
 
   const tabStyle = (active) => ({

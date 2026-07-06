@@ -204,6 +204,8 @@ function ConnectedAccountsCard() {
             apiSet('/api/auth/me', { user: sd.user })
             const un = sd.user && sd.user.telegram && sd.user.telegram.username
             setNote({ ok: true, text: un ? `Telegram account linked (@${un}) ✅` : 'Telegram account linked ✅' })
+            // Recharge la page pour repartir sur un etat propre (menu, groupes...).
+            setTimeout(() => window.location.reload(), 700)
           }
         } catch { /* on retente au prochain tick */ }
       }, 2000)
@@ -227,6 +229,7 @@ function ConnectedAccountsCard() {
       setUser(data.user)
       apiSet('/api/auth/me', { user: data.user })
       setNote({ ok: true, text: 'Telegram account disconnected.' })
+      setTimeout(() => window.location.reload(), 700)
     } catch {
       setNote({ ok: false, text: 'Network error.' })
     }

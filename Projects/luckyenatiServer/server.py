@@ -80,6 +80,8 @@ app_sessions = db['app_sessions']
 group_join_requests = db['group_join_requests']
 # Jetons ephemeres pour lier un compte Telegram via le bot (deep-link /start <token>).
 tg_link_tokens = db['tg_link_tokens']
+# Cache persistant des groupes rejoints par user (affichage instantane de Your Groups).
+user_joined_groups = db['user_joined_groups']
 try:
     app_users.create_index('email', unique=True)
     app_sessions.create_index('token', unique=True)
@@ -87,6 +89,7 @@ try:
     tg_link_tokens.create_index('token', unique=True)
     # Expiration automatique des jetons apres 10 min (TTL index Mongo).
     tg_link_tokens.create_index('created_at', expireAfterSeconds=600)
+    user_joined_groups.create_index([('user_id', 1), ('group_id', 1)], unique=True)
 except Exception as _e:
     logger.warning(f"Auth index setup: {_e}")
 
@@ -915,36 +918,33 @@ def _tg_join_link(group_id):
     return link
 
 
-@app.route('/api/my-groups', methods=['GET'])
-def get_my_groups():
-    """Groupes de l'utilisateur connecte pour la page Your Groups.
-    - joined   : groupes (parmi ceux du bot) ou le user Telegram est membre.
-    - available: les autres, avec un lien de join si disponible + flag 'requested'.
-    Requiert un compte connecte ET un Telegram lie."""
+def _my_groups_auth():
+    """Retourne (user, tg_id) si connecte + Telegram lie, sinon (reponse d'erreur, None)."""
     user = _current_user()
     if not user:
-        return jsonify({'success': False, 'error': 'not_authenticated'}), 401
-    tg = user.get('telegram') or {}
-    tg_id = tg.get('id')
+        return (jsonify({'success': False, 'error': 'not_authenticated'}), 401), None
+    tg_id = (user.get('telegram') or {}).get('id')
     if not tg_id:
-        return jsonify({'success': False, 'error': 'telegram_not_linked'}), 401
-
+        return (jsonify({'success': False, 'error': 'telegram_not_linked'}), 401), None
     try:
-        tg_id = int(tg_id)
+        return user, int(tg_id)
     except (TypeError, ValueError):
-        return jsonify({'success': False, 'error': 'invalid_telegram_id'}), 400
+        return (jsonify({'success': False, 'error': 'invalid_telegram_id'}), 400), None
 
+
+def _hydrate_my_groups(user, joined_ids, members_by_gid):
+    """Construit {joined, available} a partir des stats agregees + de l'ensemble
+    des group_id rejoints (joined_ids). Aucun appel Telegram ici -> instantane.
+    members_by_gid : nb de membres deja connu (stocke) par group_id (peut etre vide)."""
     stats = get_all_groups_stats().get('data', [])
     requested_ids = {
         d['group_id'] for d in group_join_requests.find({'user_id': user['id']}, {'group_id': 1})
     }
-
     joined, available = [], []
     for g in stats:
         gid = g.get('group_id')
         if gid is None:
             continue
-        status = _tg_get_chat_member(gid, tg_id)
         base = {
             'group_id': gid,
             'group_name': g.get('group_name', 'Unknown'),
@@ -953,15 +953,62 @@ def get_my_groups():
             'calls': g.get('total_members', 0),
             'win_rate': round(g.get('win_rate', 0)),
         }
-        if status in _MEMBER_STATUSES:
-            base['members'] = _tg_member_count(gid)
+        if gid in joined_ids:
+            base['members'] = members_by_gid.get(gid)
             joined.append(base)
         else:
-            base['join_link'] = _tg_join_link(gid)
             base['requested'] = gid in requested_ids
             available.append(base)
+    return {'success': True, 'joined': joined, 'available': available}
 
-    return jsonify({'success': True, 'joined': joined, 'available': available})
+
+@app.route('/api/my-groups', methods=['GET'])
+def get_my_groups():
+    """Chemin RAPIDE (aucun appel Telegram) : lit les groupes rejoints depuis la
+    base (user_joined_groups) pour un affichage instantane. La detection des
+    nouveaux/anciens se fait via /api/my-groups/refresh (tache de fond du front)."""
+    user, tg_id = _my_groups_auth()
+    if tg_id is None:
+        return user  # (reponse, code) d'erreur
+
+    stored = list(user_joined_groups.find({'user_id': user['id']}, {'group_id': 1, 'members': 1}))
+    joined_ids = {d['group_id'] for d in stored}
+    members_by_gid = {d['group_id']: d.get('members') for d in stored}
+    return jsonify(_hydrate_my_groups(user, joined_ids, members_by_gid))
+
+
+@app.route('/api/my-groups/refresh', methods=['GET'])
+def refresh_my_groups():
+    """Chemin LENT (reconciliation) : scanne l'appartenance via getChatMember sur
+    tous les groupes connus, met a jour user_joined_groups (ajoute les nouveaux,
+    retire ceux quittes) et renvoie la liste fraiche."""
+    user, tg_id = _my_groups_auth()
+    if tg_id is None:
+        return user
+
+    stats = get_all_groups_stats().get('data', [])
+    member_ids = set()
+    members_by_gid = {}
+    for g in stats:
+        gid = g.get('group_id')
+        if gid is None:
+            continue
+        status = _tg_get_chat_member(gid, tg_id)
+        if status in _MEMBER_STATUSES:
+            member_ids.add(gid)
+            members_by_gid[gid] = _tg_member_count(gid)
+
+    # Reconciliation de la base : upsert des membres, suppression des groupes quittes.
+    for gid in member_ids:
+        user_joined_groups.update_one(
+            {'user_id': user['id'], 'group_id': gid},
+            {'$set': {'user_id': user['id'], 'group_id': gid,
+                      'members': members_by_gid.get(gid), 'joined_at': time.time()}},
+            upsert=True,
+        )
+    user_joined_groups.delete_many({'user_id': user['id'], 'group_id': {'$nin': list(member_ids)}})
+
+    return jsonify(_hydrate_my_groups(user, member_ids, members_by_gid))
 
 
 @app.route('/api/group/<group_id>/request-join', methods=['POST'])
