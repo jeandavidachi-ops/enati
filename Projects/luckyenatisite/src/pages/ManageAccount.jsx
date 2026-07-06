@@ -3,7 +3,7 @@ import PageShell from '../components/shared/PageShell.jsx'
 
 // Contenu porte depuis new/Manage Account.dc.html (maquette statique).
 const HTML = `
-<div style="max-width:1100px;margin:0 auto;padding:38px;box-sizing:border-box;font-family:'Inter',sans-serif;">
+<div style="padding:38px;box-sizing:border-box;font-family:'Inter',sans-serif;">
   <div style="margin-bottom:26px;">
     <h1 style="margin:0;color:#ffffff;font-size:27px;font-weight:700;letter-spacing:-0.01em;line-height:1;">Manage Account</h1>
     <p style="margin:11px 0 0 0;color:#8b9599;font-size:15px;font-weight:400;line-height:1;">Update your login, security and account preferences</p>

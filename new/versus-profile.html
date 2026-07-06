@@ -1,10 +1,21 @@
-import React from 'react'
-import PageShell from '../components/shared/PageShell.jsx'
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VERSUS Profile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #070808; }
+</style>
+</head>
+<body>
+<div style="max-width:1600px; margin:0 auto; padding:24px; background:#070808; display:grid; grid-template-columns:470px 1fr; gap:18px; align-items:start; font-family:'Inter',system-ui,sans-serif;">
 
-// Contenu porte depuis new/versus-profile.html (maquette statique).
-const HTML = `
-<div style="padding:24px; display:grid; grid-template-columns:470px 1fr; gap:18px; align-items:start; font-family:'Inter',system-ui,sans-serif;">
-
+  <!-- ===== ProfileHeader ===== -->
   <div style="grid-column:1 / -1; width:100%; background:#101314; border:1px solid #24282c; border-radius:8px; padding:22px 28px; display:flex; align-items:center; gap:20px;">
     <div style="width:68px; height:68px; border-radius:50%; flex-shrink:0; background:radial-gradient(circle at 50% 40%,#1b2022,#0d1011);"></div>
     <div>
@@ -28,12 +39,13 @@ const HTML = `
         <div><div style="font-size:13px; color:#7a8085; white-space:nowrap;">Groups Created</div><div style="font-size:26px; font-weight:700; color:#ffffff; line-height:1.05; margin-top:3px;">17</div></div>
       </div>
     </div>
-    <div style="display:flex; align-items:center; gap:8px; border:1px solid #24282c; border-radius:8px; padding:12px 20px; margin-left:20px; flex-shrink:0; white-space:nowrap; cursor:pointer;">
+    <div style="display:flex; align-items:center; gap:8px; border:1px solid #24282c; border-radius:8px; padding:12px 20px; margin-left:20px; flex-shrink:0; white-space:nowrap;">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 20l4.5-1 9-9-3.5-3.5-9 9L4 20z" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round"/><path d="M13.5 6l3.5 3.5" stroke="#ffffff" stroke-width="1.6"/></svg>
       <span style="font-size:14px; font-weight:500; color:#ffffff;">Edit profile</span>
     </div>
   </div>
 
+  <!-- ===== WinRateCard ===== -->
   <div style="grid-column:1 / 2; align-self:stretch; width:100%; min-height:300px; background:#101314; border:1px solid #24282c; border-radius:8px; padding:24px; display:flex; flex-direction:column;">
     <div style="display:flex; align-items:center; gap:8px;">
       <span style="font-size:18px; font-weight:600; color:#ffffff;">Win Rate</span>
@@ -59,6 +71,7 @@ const HTML = `
     </div>
   </div>
 
+  <!-- ===== GroupsCallsCard ===== -->
   <div style="grid-column:2 / 3; align-self:start; width:100%; background:#101314; border:1px solid #24282c; border-radius:8px; padding:22px 24px;">
     <div style="display:flex; align-items:center; gap:8px;">
       <span style="font-size:18px; font-weight:600; color:#ffffff;">Groups Calls</span>
@@ -76,9 +89,10 @@ const HTML = `
     <div style="display:grid; grid-template-columns:1.55fr 1.35fr 1.7fr 1.15fr; align-items:center; padding:9px 0; border-bottom:1px solid #191d1f;"><div style="display:flex; align-items:center; gap:10px;"><span style="width:26px; height:26px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><span style="font-size:15px; font-weight:600; color:#ffffff;">$SOLX</span></div><div><div style="font-size:14px; color:#e6e8ea;">$2.3K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">1d ago</div></div><div style="font-size:14px; color:#e6e8ea;">$248.23 MC</div><div style="font-size:13px; color:#787e83;">@solsniper</div></div>
     <div style="display:grid; grid-template-columns:1.55fr 1.35fr 1.7fr 1.15fr; align-items:center; padding:9px 0; border-bottom:1px solid #191d1f;"><div style="display:flex; align-items:center; gap:10px;"><span style="width:26px; height:26px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><span style="font-size:15px; font-weight:600; color:#ffffff;">$TEABAG</span></div><div><div style="font-size:14px; color:#e6e8ea;">$1.2K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">3d ago</div></div><div style="font-size:14px; color:#e6e8ea;">$0.00000378 MC</div><div style="font-size:13px; color:#787e83;">@teabag0g</div></div>
     <div style="display:grid; grid-template-columns:1.55fr 1.35fr 1.7fr 1.15fr; align-items:center; padding:9px 0; border-bottom:1px solid #191d1f;"><div style="display:flex; align-items:center; gap:10px;"><span style="width:26px; height:26px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><span style="font-size:15px; font-weight:600; color:#ffffff;">$WOLF</span></div><div><div style="font-size:14px; color:#e6e8ea;">$3.7K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">12h ago</div></div><div style="font-size:14px; color:#e6e8ea;">$42.6K MC</div><div style="font-size:13px; color:#787e83;">@wolfcalls</div></div>
-    <div style="text-align:center; padding-top:16px; font-size:14px; font-weight:500; color:#ffffff; cursor:pointer;">View all group calls</div>
+    <div style="text-align:center; padding-top:16px; font-size:14px; font-weight:500; color:#ffffff;">View all group calls</div>
   </div>
 
+  <!-- ===== YourCallsCard ===== -->
   <div style="grid-column:1 / -1; width:100%; background:#101314; border:1px solid #24282c; border-radius:8px; padding:20px 24px;">
     <div style="display:flex; align-items:center; justify-content:space-between;">
       <div style="display:flex; align-items:center; gap:9px;">
@@ -100,15 +114,9 @@ const HTML = `
     <div style="display:grid; grid-template-columns:2.6fr 2fr 2.4fr 1.4fr; align-items:center; padding:15px 0; border-bottom:1px solid #17191b;"><div style="display:flex; align-items:center; gap:11px;"><span style="width:30px; height:30px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><div><div style="font-size:15px; font-weight:600; color:#ffffff;">Rally</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">$139.05 invested</div></div></div><div><div style="font-size:14px; color:#e6e8ea;">$10.2K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">1d ago</div></div><div style="font-size:14px; color:#e6e8ea;">$139.05 MC</div><div style="text-align:right;"><div style="font-size:14px; font-weight:600; color:#4ade80;">+$36.59</div><div style="font-size:12px; color:#4ade80; margin-top:2px;">+26.31%</div></div></div>
     <div style="display:grid; grid-template-columns:2.6fr 2fr 2.4fr 1.4fr; align-items:center; padding:15px 0; border-bottom:1px solid #17191b;"><div style="display:flex; align-items:center; gap:11px;"><span style="width:30px; height:30px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><div><div style="font-size:15px; font-weight:600; color:#ffffff;">SOL</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">$131.3 invested</div></div></div><div><div style="font-size:14px; color:#e6e8ea;">$5.1K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">2d ago</div></div><div style="font-size:14px; color:#e6e8ea;">$131.36 MC</div><div style="text-align:right;"><div style="font-size:14px; font-weight:600; color:#4ade80;">+$0.19</div><div style="font-size:12px; color:#4ade80; margin-top:2px;">+1.47%</div></div></div>
     <div style="display:grid; grid-template-columns:2.6fr 2fr 2.4fr 1.4fr; align-items:center; padding:15px 0; border-bottom:1px solid #17191b;"><div style="display:flex; align-items:center; gap:11px;"><span style="width:30px; height:30px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><div><div style="font-size:15px; font-weight:600; color:#ffffff;">TEABAG</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">$1,037.47 invested</div></div></div><div><div style="font-size:14px; color:#e6e8ea;">$2.3K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">3d ago</div></div><div style="font-size:14px; color:#e6e8ea;">$0.00000378 MC</div><div style="text-align:right;"><div style="font-size:14px; font-weight:600; color:#f0564a;">-$789.71</div><div style="font-size:12px; color:#f0564a; margin-top:2px;">-76.12%</div></div></div>
-    <div style="text-align:center; padding-top:16px; font-size:14px; font-weight:500; color:#ffffff; cursor:pointer;">View all calls</div>
+    <div style="text-align:center; padding-top:16px; font-size:14px; font-weight:500; color:#ffffff;">View all calls</div>
   </div>
 
-</div>`
-
-export default function Profile() {
-  return (
-    <PageShell>
-      <div style={{ background: "#070808" }} dangerouslySetInnerHTML={{ __html: HTML }} />
-    </PageShell>
-  )
-}
+</div>
+</body>
+</html>

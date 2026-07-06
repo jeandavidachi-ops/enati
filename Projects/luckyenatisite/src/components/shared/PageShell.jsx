@@ -30,7 +30,11 @@ export default function PageShell({ children }) {
           </div>
         </header>
 
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 w-full">
+          <div className="max-w-[clamp(960px,72vw,1400px)] mx-auto w-full">
+            {children}
+          </div>
+        </main>
 
         <footer className="px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-8">
           <div className="w-full flex flex-col md:flex-row gap-4 md:items-end md:justify-between text-xs text-zinc-500">
