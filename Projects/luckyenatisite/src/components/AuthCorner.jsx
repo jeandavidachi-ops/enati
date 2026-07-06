@@ -2,6 +2,7 @@
    Boutons Sign In/Up -> Connect Telegram -> carte de rang, + modales via portal. */
 import React, { useState as vsUseState, useEffect as vsUseEffect, useRef as vsUseRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate as vsUseNavigate } from 'react-router-dom'
 import { apiFetch, apiGet, apiSet } from '../lib/api.js'
 
 ;(function injectAuthStyles() {
@@ -335,6 +336,8 @@ function VsAmRow({ danger, onClick, children, icon }) {
 // Bouton rank card + dropdown menu compte (ouvre au survol ET au clic).
 function VsAccountMenu({ user, onLogout }) {
   const [open, setOpen] = vsUseState(false)
+  const navigate = vsUseNavigate()
+  const go = (path) => { setOpen(false); navigate(path) }
   const wrapRef = vsUseRef(null)
   const closeTimer = vsUseRef(null)
   const cancelClose = () => { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null } }
@@ -354,9 +357,9 @@ function VsAccountMenu({ user, onLogout }) {
       </div>
       {open && (
         <div className="vs-am-menu" role="menu">
-          <VsAmRow icon={<svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="7" r="4" /></svg>}>Your profile</VsAmRow>
-          <VsAmRow icon={<svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" /><circle cx="12" cy="12" r="3" /></svg>}>Manage account</VsAmRow>
-          <VsAmRow icon={<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>}>Your Groups</VsAmRow>
+          <VsAmRow onClick={() => go('/profile')} icon={<svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="7" r="4" /></svg>}>Your profile</VsAmRow>
+          <VsAmRow onClick={() => go('/account')} icon={<svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" /><circle cx="12" cy="12" r="3" /></svg>}>Manage account</VsAmRow>
+          <VsAmRow onClick={() => go('/groups')} icon={<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>}>Your Groups</VsAmRow>
           <VsAmRow danger onClick={() => { setOpen(false); onLogout() }} icon={<svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>}>Log out</VsAmRow>
         </div>
       )}

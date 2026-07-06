@@ -1,0 +1,114 @@
+import React from 'react'
+import PageShell from '../components/shared/PageShell.jsx'
+
+// Contenu porte depuis new/versus-profile.html (maquette statique).
+const HTML = `
+<div style="max-width:1600px; margin:0 auto; padding:24px; display:grid; grid-template-columns:470px 1fr; gap:18px; align-items:start; font-family:'Inter',system-ui,sans-serif;">
+
+  <div style="grid-column:1 / -1; width:100%; background:#101314; border:1px solid #24282c; border-radius:8px; padding:22px 28px; display:flex; align-items:center; gap:20px;">
+    <div style="width:68px; height:68px; border-radius:50%; flex-shrink:0; background:radial-gradient(circle at 50% 40%,#1b2022,#0d1011);"></div>
+    <div>
+      <div style="font-size:24px; font-weight:700; color:#ffffff; letter-spacing:-0.01em; line-height:1;">ZERO</div>
+      <div style="font-size:14px; color:#7a8085; margin-top:6px;">@straighttozero</div>
+      <div style="font-size:14px; color:#b4b9bd; margin-top:12px; white-space:nowrap;">Roll the dice with conviction then roll once more</div>
+      <div style="display:flex; align-items:center; gap:20px; margin-top:14px; white-space:nowrap;">
+        <div style="display:flex; align-items:center; gap:7px; font-size:13px; color:#7a8085;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#7a8085" stroke-width="1.6"/><path d="M12 7v5l3 2" stroke="#7a8085" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>10h 48m ago</div>
+        <div style="display:flex; align-items:center; gap:7px; font-size:13px; color:#7a8085;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.4" stroke="#7a8085" stroke-width="1.6"/><circle cx="12" cy="12" r="3.2" stroke="#7a8085" stroke-width="1.6"/><path d="M12 1.6V4M12 20v2.4M1.6 12H4M20 12h2.4" stroke="#7a8085" stroke-width="1.6" stroke-linecap="round"/></svg>4 scans</div>
+        <div style="display:flex; align-items:center; gap:7px; font-size:13px; color:#7a8085;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="4.5" width="17" height="16" rx="2.2" stroke="#7a8085" stroke-width="1.6"/><path d="M3.5 9h17M8 3v3M16 3v3" stroke="#7a8085" stroke-width="1.6" stroke-linecap="round"/></svg>Joined Jan 2026</div>
+      </div>
+    </div>
+    <div style="flex:1;"></div>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <div style="border:1px solid #24282c; border-radius:8px; padding:16px 20px; display:flex; align-items:center; gap:14px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="#7a8085" stroke-width="1.6"/><path d="M3.5 19c0-3 2.6-5 5.5-5s5.5 2 5.5 5" stroke="#7a8085" stroke-width="1.6" stroke-linecap="round"/><path d="M16 6.2a3 3 0 010 5.6M18 19c0-2.4-1.3-4.2-3-4.8" stroke="#7a8085" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <div><div style="font-size:13px; color:#7a8085; white-space:nowrap;">Groups Joined</div><div style="font-size:26px; font-weight:700; color:#ffffff; line-height:1.05; margin-top:3px;">5</div></div>
+      </div>
+      <div style="border:1px solid #24282c; border-radius:8px; padding:16px 20px; display:flex; align-items:center; gap:14px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3.5l2.6 5.27 5.82.85-4.21 4.1.99 5.8L12 16.8l-5.2 2.72.99-5.8-4.21-4.1 5.82-.85L12 3.5z" stroke="#7a8085" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <div><div style="font-size:13px; color:#7a8085; white-space:nowrap;">Groups Created</div><div style="font-size:26px; font-weight:700; color:#ffffff; line-height:1.05; margin-top:3px;">17</div></div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px; border:1px solid #24282c; border-radius:8px; padding:12px 20px; margin-left:20px; flex-shrink:0; white-space:nowrap; cursor:pointer;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 20l4.5-1 9-9-3.5-3.5-9 9L4 20z" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round"/><path d="M13.5 6l3.5 3.5" stroke="#ffffff" stroke-width="1.6"/></svg>
+      <span style="font-size:14px; font-weight:500; color:#ffffff;">Edit profile</span>
+    </div>
+  </div>
+
+  <div style="grid-column:1 / 2; align-self:stretch; width:100%; min-height:300px; background:#101314; border:1px solid #24282c; border-radius:8px; padding:24px; display:flex; flex-direction:column;">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:18px; font-weight:600; color:#ffffff;">Win Rate</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#7a8085" stroke-width="1.6"/><path d="M12 11v5" stroke="#7a8085" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="7.8" r="1.05" fill="#7a8085"/></svg>
+    </div>
+    <div style="display:flex; align-items:center; gap:28px; margin:auto 0;">
+      <div style="position:relative; width:150px; height:150px; flex-shrink:0;">
+        <svg width="150" height="150" viewBox="0 0 150 150">
+          <defs><linearGradient id="wrGrad" x1="0.1" y1="0.1" x2="1" y2="0.35"><stop offset="0" stop-color="#4ade80"/><stop offset="0.7" stop-color="#20b451"/><stop offset="1" stop-color="#0d7a37"/></linearGradient></defs>
+          <circle cx="75" cy="75" r="63" fill="none" stroke="#23272b" stroke-width="14"/>
+          <circle cx="75" cy="75" r="63" fill="none" stroke="url(#wrGrad)" stroke-width="14" stroke-linecap="round" stroke-dasharray="395.8" stroke-dashoffset="126.7" transform="rotate(5 75 75)"/>
+        </svg>
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <div style="font-size:38px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.01em;">68%</div>
+          <div style="font-size:13px; color:#9aa0a4; margin-top:6px;">Win Rate</div>
+        </div>
+      </div>
+      <div style="flex:1;">
+        <div style="display:flex; align-items:center; padding:13px 0; border-bottom:1px solid #24282c;"><span style="width:9px; height:9px; border-radius:50%; background:#22c55e; flex-shrink:0;"></span><span style="font-size:15px; color:#e6e8ea; margin-left:11px;">Total Wins</span><span style="flex:1;"></span><span style="font-size:15px; font-weight:500; color:#ffffff;">28</span></div>
+        <div style="display:flex; align-items:center; padding:13px 0; border-bottom:1px solid #24282c;"><span style="width:9px; height:9px; border-radius:50%; background:#ef4444; flex-shrink:0;"></span><span style="font-size:15px; color:#e6e8ea; margin-left:11px;">Total Defeats</span><span style="flex:1;"></span><span style="font-size:15px; font-weight:500; color:#ffffff;">13</span></div>
+        <div style="display:flex; align-items:center; padding:13px 0;"><span style="width:9px; height:9px; border-radius:50%; background:#cfd3d6; flex-shrink:0;"></span><span style="font-size:15px; color:#e6e8ea; margin-left:11px;">Total Calls</span><span style="flex:1;"></span><span style="font-size:15px; font-weight:500; color:#ffffff;">41</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="grid-column:2 / 3; align-self:start; width:100%; background:#101314; border:1px solid #24282c; border-radius:8px; padding:22px 24px;">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:18px; font-weight:600; color:#ffffff;">Groups Calls</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.1" stroke="#9aa0a4" stroke-width="1.6"/><path d="M3.4 19c0-3 2.6-5 5.6-5s5.6 2 5.6 5" stroke="#9aa0a4" stroke-width="1.6" stroke-linecap="round"/><path d="M16.2 6.2a3 3 0 010 5.6M18.4 19c0-2.4-1.3-4.3-3.1-4.9" stroke="#9aa0a4" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </div>
+    <div style="font-size:13px; color:#7a8085; margin-top:5px;">All calls from the groups you're in</div>
+    <div style="display:grid; grid-template-columns:1.55fr 1.35fr 1.7fr 1.15fr; align-items:center; padding:16px 0 12px; border-bottom:1px solid #1f2427;">
+      <span style="font-size:13px; color:#7a8085;">Token</span>
+      <span style="font-size:13px; color:#7a8085;">First Call</span>
+      <span style="font-size:13px; color:#7a8085;">Current MCAP</span>
+      <span style="display:flex; align-items:center; gap:6px; font-size:13px; color:#7a8085;">User<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 3L10.5 13.5M21 3l-6.6 18-3.9-8.1L3.6 9 21 3z" stroke="#7a8085" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div style="display:grid; grid-template-columns:1.55fr 1.35fr 1.7fr 1.15fr; align-items:center; padding:9px 0; border-bottom:1px solid #191d1f;"><div style="display:flex; align-items:center; gap:10px;"><span style="width:26px; height:26px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><span style="font-size:15px; font-weight:600; color:#ffffff;">Rally</span></div><div><div style="font-size:14px; color:#e6e8ea;">$10.2K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">1d ago</div></div><div style="font-size:14px; color:#e6e8ea;">$139.05 MC</div><div style="font-size:13px; color:#787e83;">@rallycaller</div></div>
+    <div style="display:grid; grid-template-columns:1.55fr 1.35fr 1.7fr 1.15fr; align-items:center; padding:9px 0; border-bottom:1px solid #191d1f;"><div style="display:flex; align-items:center; gap:10px;"><span style="width:26px; height:26px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><span style="font-size:15px; font-weight:600; color:#ffffff;">$BILLY</span></div><div><div style="font-size:14px; color:#e6e8ea;">$5.1K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">2d ago</div></div><div style="font-size:14px; color:#e6e8ea;">$7.9K MC</div><div style="font-size:13px; color:#787e83;">@billy_calls</div></div>
+    <div style="display:grid; grid-template-columns:1.55fr 1.35fr 1.7fr 1.15fr; align-items:center; padding:9px 0; border-bottom:1px solid #191d1f;"><div style="display:flex; align-items:center; gap:10px;"><span style="width:26px; height:26px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><span style="font-size:15px; font-weight:600; color:#ffffff;">$SOLX</span></div><div><div style="font-size:14px; color:#e6e8ea;">$2.3K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">1d ago</div></div><div style="font-size:14px; color:#e6e8ea;">$248.23 MC</div><div style="font-size:13px; color:#787e83;">@solsniper</div></div>
+    <div style="display:grid; grid-template-columns:1.55fr 1.35fr 1.7fr 1.15fr; align-items:center; padding:9px 0; border-bottom:1px solid #191d1f;"><div style="display:flex; align-items:center; gap:10px;"><span style="width:26px; height:26px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><span style="font-size:15px; font-weight:600; color:#ffffff;">$TEABAG</span></div><div><div style="font-size:14px; color:#e6e8ea;">$1.2K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">3d ago</div></div><div style="font-size:14px; color:#e6e8ea;">$0.00000378 MC</div><div style="font-size:13px; color:#787e83;">@teabag0g</div></div>
+    <div style="display:grid; grid-template-columns:1.55fr 1.35fr 1.7fr 1.15fr; align-items:center; padding:9px 0; border-bottom:1px solid #191d1f;"><div style="display:flex; align-items:center; gap:10px;"><span style="width:26px; height:26px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><span style="font-size:15px; font-weight:600; color:#ffffff;">$WOLF</span></div><div><div style="font-size:14px; color:#e6e8ea;">$3.7K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">12h ago</div></div><div style="font-size:14px; color:#e6e8ea;">$42.6K MC</div><div style="font-size:13px; color:#787e83;">@wolfcalls</div></div>
+    <div style="text-align:center; padding-top:16px; font-size:14px; font-weight:500; color:#ffffff; cursor:pointer;">View all group calls</div>
+  </div>
+
+  <div style="grid-column:1 / -1; width:100%; background:#101314; border:1px solid #24282c; border-radius:8px; padding:20px 24px;">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <span style="font-size:18px; font-weight:600; color:#ffffff;">Your Calls</span>
+        <span style="font-size:13px; font-weight:600; color:#9aa0a4; background:#1e2225; border-radius:6px; padding:2px 8px;">3</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="display:flex; align-items:center; gap:7px; font-size:14px; color:#cfd3d6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M8 4v16M8 4L5 7M8 4l3 3M16 20V4M16 20l-3-3M16 20l3-3" stroke="#7a8085" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Recent</div>
+        <div style="display:flex; align-items:center; gap:8px; border:1px solid #24282c; border-radius:8px; padding:8px 14px; font-size:14px; color:#cfd3d6;">Open<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#cfd3d6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div style="border:1px solid #3d4348; border-radius:8px; padding:8px 16px; font-size:14px; font-weight:500; color:#ffffff;">Closed</div>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:2.6fr 2fr 2.4fr 1.4fr; align-items:center; padding:18px 0 12px; border-bottom:1px solid #1f2427;">
+      <span style="font-size:13px; color:#7a8085;">Token</span>
+      <span style="font-size:13px; color:#7a8085;">First Call</span>
+      <span style="font-size:13px; color:#7a8085;">Current MCAP</span>
+      <span style="font-size:13px; color:#7a8085; text-align:right;">PnL</span>
+    </div>
+    <div style="display:grid; grid-template-columns:2.6fr 2fr 2.4fr 1.4fr; align-items:center; padding:15px 0; border-bottom:1px solid #17191b;"><div style="display:flex; align-items:center; gap:11px;"><span style="width:30px; height:30px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><div><div style="font-size:15px; font-weight:600; color:#ffffff;">Rally</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">$139.05 invested</div></div></div><div><div style="font-size:14px; color:#e6e8ea;">$10.2K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">1d ago</div></div><div style="font-size:14px; color:#e6e8ea;">$139.05 MC</div><div style="text-align:right;"><div style="font-size:14px; font-weight:600; color:#4ade80;">+$36.59</div><div style="font-size:12px; color:#4ade80; margin-top:2px;">+26.31%</div></div></div>
+    <div style="display:grid; grid-template-columns:2.6fr 2fr 2.4fr 1.4fr; align-items:center; padding:15px 0; border-bottom:1px solid #17191b;"><div style="display:flex; align-items:center; gap:11px;"><span style="width:30px; height:30px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><div><div style="font-size:15px; font-weight:600; color:#ffffff;">SOL</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">$131.3 invested</div></div></div><div><div style="font-size:14px; color:#e6e8ea;">$5.1K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">2d ago</div></div><div style="font-size:14px; color:#e6e8ea;">$131.36 MC</div><div style="text-align:right;"><div style="font-size:14px; font-weight:600; color:#4ade80;">+$0.19</div><div style="font-size:12px; color:#4ade80; margin-top:2px;">+1.47%</div></div></div>
+    <div style="display:grid; grid-template-columns:2.6fr 2fr 2.4fr 1.4fr; align-items:center; padding:15px 0; border-bottom:1px solid #17191b;"><div style="display:flex; align-items:center; gap:11px;"><span style="width:30px; height:30px; border-radius:50%; background:#1b2022; flex-shrink:0;"></span><div><div style="font-size:15px; font-weight:600; color:#ffffff;">TEABAG</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">$1,037.47 invested</div></div></div><div><div style="font-size:14px; color:#e6e8ea;">$2.3K MC</div><div style="font-size:12px; color:#7a8085; margin-top:2px;">3d ago</div></div><div style="font-size:14px; color:#e6e8ea;">$0.00000378 MC</div><div style="text-align:right;"><div style="font-size:14px; font-weight:600; color:#f0564a;">-$789.71</div><div style="font-size:12px; color:#f0564a; margin-top:2px;">-76.12%</div></div></div>
+    <div style="text-align:center; padding-top:16px; font-size:14px; font-weight:500; color:#ffffff; cursor:pointer;">View all calls</div>
+  </div>
+
+</div>`
+
+export default function Profile() {
+  return (
+    <PageShell>
+      <div style={{ background: "#070808" }} dangerouslySetInnerHTML={{ __html: HTML }} />
+    </PageShell>
+  )
+}

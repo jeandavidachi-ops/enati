@@ -5,6 +5,9 @@ import Leaderboards from './pages/Leaderboards.jsx'
 import Explore from './pages/Explore.jsx'
 import GroupProfile from './pages/GroupProfile.jsx'
 import TokenPage from './pages/TokenPage.jsx'
+import Profile from './pages/Profile.jsx'
+import ManageAccount from './pages/ManageAccount.jsx'
+import YourGroups from './pages/YourGroups.jsx'
 import { prefetch } from './lib/api.js'
 
 // Mêmes URLs qu'avant la migration MPA -> SPA (navigation client, sans refresh).
@@ -29,6 +32,9 @@ export default function App() {
       <Route path="/group" element={<Explore type="group" />} />
       <Route path="/group/:id" element={<GroupProfile />} />
       <Route path="/ticker/:address" element={<TokenPage />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/account" element={<ManageAccount />} />
+      <Route path="/groups" element={<YourGroups />} />
     </Routes>
   )
 }
