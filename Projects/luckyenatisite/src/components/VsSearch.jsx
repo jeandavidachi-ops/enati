@@ -3,6 +3,7 @@
    Backend: GET /api/search?q= -> { success, groups:[...], tickers:[...] } */
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { apiFetch } from '../lib/api.js'
 
 ;(function injectSearchStyles() {
   if (typeof document === 'undefined') return
@@ -95,8 +96,7 @@ export default function VsSearch(props) {
       if (!addr || tokenImgs[addr] !== undefined) return
       // Marque comme "en cours" (null) pour eviter les fetch redondants entre frappes.
       setTokenImgs((prev) => (prev[addr] !== undefined ? prev : { ...prev, [addr]: null }))
-      fetch('/api/token-image/' + encodeURIComponent(addr))
-        .then((r) => r.json())
+      apiFetch('/api/token-image/' + encodeURIComponent(addr))
         .then((img) => {
           if (img && img.success && img.image_url) {
             setTokenImgs((prev) => ({ ...prev, [addr]: img.image_url }))

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
+import { useApi } from '../lib/api.js'
 
 const MONO = "'Geist Pixel', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
@@ -159,18 +160,13 @@ function TVChart({ chain, address, height = 340 }) {
 
 export default function App() {
   useGlobalZoom();
-  const [data, setData] = useState(null);
-  const [notFound, setNotFound] = useState(false);
 
   // address = paramètre de route /ticker/:address (déjà décodé par le router)
   const { address } = useParams();
 
-  useEffect(() => {
-    fetch("/api/token/" + encodeURIComponent(address))
-      .then((r) => r.json())
-      .then((res) => { if (res.success) setData(res.data); else setNotFound(true); })
-      .catch(() => setNotFound(true));
-  }, [address]);
+  const res = useApi("/api/token/" + encodeURIComponent(address));
+  const data = res && res.success ? res.data : null;
+  const notFound = !!(res && !res.success);
 
   const token = data && data.token;
   const m = (data && data.metrics) || {};

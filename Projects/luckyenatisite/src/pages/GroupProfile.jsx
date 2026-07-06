@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
+import { useApi } from '../lib/api.js'
 
 const MONO = "'Geist Pixel', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
@@ -175,18 +176,13 @@ function RecentCalls({ recent }) {
 
 export default function App() {
   useGlobalZoom();
-  const [data, setData] = useState(null);
-  const [notFound, setNotFound] = useState(false);
 
   // group_id = paramètre de route /group/:id
   const { id: gid } = useParams();
 
-  useEffect(() => {
-    fetch("/api/group/" + encodeURIComponent(gid))
-      .then((r) => r.json())
-      .then((res) => { if (res.success) setData(res.data); else setNotFound(true); })
-      .catch(() => setNotFound(true));
-  }, [gid]);
+  const res = useApi("/api/group/" + encodeURIComponent(gid));
+  const data = res && res.success ? res.data : null;
+  const notFound = !!(res && !res.success);
 
   const hero = data && data.hero;
   const photo = gid ? "/api/group-photo/" + gid : null;

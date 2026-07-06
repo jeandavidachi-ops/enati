@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import VsSearch from '../components/VsSearch.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
+import { useApi, apiFetch, apiGet, apiSet } from '../lib/api.js'
 
 // ---- Helpers ----
 const GRADS = [
@@ -146,12 +147,18 @@ function BlocksThumb({ src, g, e }) {
     </div>
   );
 }
+// Precharge la page detail correspondant a un href de carte (survol).
+function prefetchDetail(href) {
+  if (!href) return;
+  if (href.startsWith("/group/")) apiFetch("/api/group/" + href.slice(7));
+  else if (href.startsWith("/ticker/")) apiFetch("/api/token/" + href.slice(8));
+}
 function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, telegram }) {
   const Tag = href ? Link : "article";
   // Ouvre le lien social sans declencher la navigation de la card (evite l'<a> imbrique).
   const openSocial = (url) => (ev) => { ev.preventDefault(); ev.stopPropagation(); window.open(url, "_blank", "noopener"); };
   return (
-    <Tag {...(href ? { to: href } : {})}
+    <Tag {...(href ? { to: href, onMouseEnter: () => prefetchDetail(href) } : {})}
       className={"relative w-full block overflow-hidden rounded-[20px]" + (href ? " cursor-pointer transition-colors hover:border-white/30" : "")}
       style={{
         padding: "16px 18px 15px 15px",
@@ -315,7 +322,7 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [] }) {
             {tokens.map((t, i) => {
               const RowTag = t.addr ? Link : "a";
               return (
-              <RowTag className="row" key={i} {...(t.addr ? { to: "/ticker/" + encodeURIComponent(t.addr) } : { href: "#" })}>
+              <RowTag className="row" key={i} {...(t.addr ? { to: "/ticker/" + encodeURIComponent(t.addr), onMouseEnter: () => apiFetch("/api/token/" + encodeURIComponent(t.addr)) } : { href: "#" })}>
                 <LbMedal rank={String(i + 1)} />
                 <Avatar src={t.img} g={t.g} e={t.e} className="avatar" />
                 <div className="user"><strong>{t.sym}</strong></div>
@@ -558,16 +565,13 @@ export default function Versus() {
   useGlobalZoom();
   const [groupTime, setGroupTime] = useState("1h");
   const [tickerTime, setTickerTime] = useState("12h");
-  const [groups, setGroups] = useState([]);
-  const [tickers, setTickers] = useState([]);
-  const [lbRows, setLbRows] = useState([]);
-  const [sharedMap, setSharedMap] = useState({});
   const [lbCollapsed, setLbCollapsed] = useState(false);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => apiGet("/api/auth/me")?.user ?? null);
   const [authModal, setAuthModal] = useState(null); // "login" | "signup" | null
+  const [tokenImgs, setTokenImgs] = useState({}); // addr -> { img, twitter, telegram }
   const [lbLg, setLbLg] = useState(typeof window !== "undefined" && window.matchMedia("(min-width:1024px)").matches);
   useEffect(() => {
-    fetch("/api/auth/me").then(r => r.json()).then(d => setUser(d.user)).catch(() => {});
+    apiFetch("/api/auth/me").then(d => setUser(d.user)).catch(() => {});
   }, []);
   useEffect(() => {
     const mq = window.matchMedia("(min-width:1024px)");
@@ -588,81 +592,83 @@ export default function Versus() {
     window.addEventListener("resize", measure);
     return () => { ro.disconnect(); window.removeEventListener("resize", measure); };
   }, []);
+
+  // Donnees depuis le cache (rendu instantane si prechargees au demarrage).
+  const groupsStats = useApi("/api/all-groups-stats");
+  const sharedRes = useApi("/api/shared-contracts");
+  const latestRes = useApi("/api/latest-records");
+
+  // Nombre de groupes par token (contract_address -> groups_count)
+  const sharedMap = useMemo(() => {
+    const map = {};
+    (sharedRes?.data || []).forEach(c => {
+      if (c.contract_address) map[String(c.contract_address).toLowerCase()] = c.groups_count;
+    });
+    return map;
+  }, [sharedRes]);
+
+  // Groupes : strip du haut + Popular Groups (12 premiers)
+  const groups = useMemo(() => (groupsStats?.data || []).slice(0, 12).map((g, i) => ({
+    id: g.group_id,
+    name: g.group_name || "Unknown",
+    win: Math.round(g.win_rate || 0),
+    score: g.total_current_stat || 0,
+    best: g.max_current_stat || 0,
+    calls: g.total_members || 0,
+    img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
+    g: gradOf(i), e: emojiOf(i),
+  })), [groupsStats]);
+
   // Re-mesure quand la bande Groups se remplit (change sa hauteur)
   useEffect(() => {
     if (lbTopRef.current) setLbTop(lbTopRef.current.offsetHeight);
   }, [groups]);
 
-  // Charge le nombre de groupes par token (contract_address -> groups_count)
-  useEffect(() => {
-    fetch("/api/shared-contracts").then(r => r.json()).then(res => {
-      const map = {};
-      (res.data || []).forEach(c => {
-        if (c.contract_address) map[String(c.contract_address).toLowerCase()] = c.groups_count;
-      });
-      setSharedMap(map);
-    }).catch(() => {});
-  }, []);
+  // Lignes du leaderboard latéral
+  const lbRows = useMemo(() => (groupsStats?.data || []).map((g, i) => {
+    const calls = g.total_members || 0;
+    const avg = calls > 0 ? (g.total_current_stat || 0) / calls : 0;
+    return {
+      id: g.group_id,
+      name: g.group_name || "Unknown",
+      win: Math.round(g.win_rate || 0),
+      avg: avg.toFixed(1),
+      high: g.max_current_stat || 0,
+      calls: calls,
+      img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
+      g: gradOf(i), e: emojiOf(i),
+    };
+  }), [groupsStats]);
 
-  // Charge les groupes (Leaderboard + Popular Groups + strip du haut)
-  useEffect(() => {
-    fetch("/api/all-groups-stats").then(r => r.json()).then(res => {
-      const all = res.data || [];
-      setGroups(all.slice(0, 12).map((g, i) => ({
-        id: g.group_id,
-        name: g.group_name || "Unknown",
-        win: Math.round(g.win_rate || 0),
-        score: g.total_current_stat || 0,
-        best: g.max_current_stat || 0,
-        calls: g.total_members || 0,
-        img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
-        g: gradOf(i), e: emojiOf(i),
-      })));
-      setLbRows(all.map((g, i) => {
-        const calls = g.total_members || 0;
-        const avg = calls > 0 ? (g.total_current_stat || 0) / calls : 0;
-        return {
-          id: g.group_id,
-          name: g.group_name || "Unknown",
-          win: Math.round(g.win_rate || 0),
-          avg: avg.toFixed(1),
-          high: g.max_current_stat || 0,
-          calls: calls,
-          img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
-          g: gradOf(i), e: emojiOf(i),
-        };
-      }));
-    }).catch(() => {});
-  }, []);
+  // Derniers coins (Popular Tickers) + leur image (mise en cache)
+  const tickers = useMemo(() => (latestRes?.data || []).slice(0, 12).map((c, i) => {
+    const im = tokenImgs[c.contract_address] || {};
+    return {
+      sym: c.coin_name || "?",
+      group: c.group_name || "",
+      mc: fmtMC(c.market_cap),
+      mult: c.current_stat || 0,
+      addr: c.contract_address,
+      img: im.img || null,
+      twitter: im.twitter || null,
+      telegram: im.telegram || null,
+      g: gradOf(i + 3), e: emojiOf(i + 5),
+    };
+  }), [latestRes, tokenImgs]);
 
-  // Charge les derniers coins (Popular Tickers) + leur image
   useEffect(() => {
-    fetch("/api/latest-records").then(r => r.json()).then(res => {
-      const data = (res.data || []).slice(0, 12).map((c, i) => ({
-        sym: c.coin_name || "?",
-        group: c.group_name || "",
-        mc: fmtMC(c.market_cap),
-        mult: c.current_stat || 0,
-        addr: c.contract_address,
-        img: null,
-        g: gradOf(i + 3), e: emojiOf(i + 5),
-      }));
-      setTickers(data);
-      data.forEach((t, idx) => {
-        if (!t.addr) return;
-        fetch("/api/token-image/" + encodeURIComponent(t.addr)).then(r => r.json()).then(img => {
-          if (img && img.success) {
-            setTickers(prev => prev.map((x, j) => j === idx ? {
-              ...x,
-              img: img.image_url || x.img,
-              twitter: img.twitter || null,
-              telegram: img.telegram || null,
-            } : x));
-          }
-        }).catch(() => {});
-      });
-    }).catch(() => {});
-  }, []);
+    tickers.forEach((t) => {
+      if (!t.addr || tokenImgs[t.addr]) return;
+      apiFetch("/api/token-image/" + encodeURIComponent(t.addr)).then(img => {
+        if (img && img.success) {
+          setTokenImgs(prev => (prev[t.addr] ? prev : {
+            ...prev,
+            [t.addr]: { img: img.image_url || null, twitter: img.twitter || null, telegram: img.telegram || null },
+          }));
+        }
+      }).catch(() => {});
+    });
+  }, [latestRes]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
@@ -693,7 +699,7 @@ export default function Versus() {
                 <button onClick={() => setAuthModal("signup")} className="text-sm px-4 py-2 rounded-full bg-white text-black font-semibold hover:bg-zinc-200 transition">Sign Up</button>
               </>
             ) : !user.telegram ? (
-              <TelegramButton onConnected={setUser} />
+              <TelegramButton onConnected={(u) => { setUser(u); apiSet("/api/auth/me", { user: u }); }} />
             ) : (
               <RankCardButton user={user} />
             )}
@@ -707,7 +713,7 @@ export default function Versus() {
             {groups.map((g, i) => {
               const StripTag = g.id ? Link : "a";
               return (
-              <StripTag key={i} {...(g.id ? { to: "/group/" + g.id } : {})} className={"flex items-center gap-2 shrink-0" + (g.id ? " cursor-pointer hover:text-white" : "")}>
+              <StripTag key={i} {...(g.id ? { to: "/group/" + g.id, onMouseEnter: () => apiFetch("/api/group/" + g.id) } : {})} className={"flex items-center gap-2 shrink-0" + (g.id ? " cursor-pointer hover:text-white" : "")}>
                 <Avatar src={g.img} g={g.g} e={g.e} className="w-6 h-6 rounded-md text-xs" />
                 <span className="text-sm text-zinc-200">{g.name}</span>
               </StripTag>
@@ -788,11 +794,11 @@ export default function Versus() {
       </div>
       {authModal === "login" && (
         <LoginModal onClose={() => setAuthModal(null)} onSwitch={() => setAuthModal("signup")}
-          onAuthed={(u) => { setUser(u); setAuthModal(null); }} />
+          onAuthed={(u) => { setUser(u); apiSet("/api/auth/me", { user: u }); setAuthModal(null); }} />
       )}
       {authModal === "signup" && (
         <SignupModal onClose={() => setAuthModal(null)} onSwitch={() => setAuthModal("login")}
-          onAuthed={(u) => { setUser(u); setAuthModal(null); }} />
+          onAuthed={(u) => { setUser(u); apiSet("/api/auth/me", { user: u }); setAuthModal(null); }} />
       )}
     </div>
   );

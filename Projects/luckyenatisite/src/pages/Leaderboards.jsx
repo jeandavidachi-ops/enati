@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
+import { useApi, apiFetch } from '../lib/api.js'
 
 const GRADS = [
   "from-lime-600 via-emerald-700 to-stone-800","from-sky-400 via-blue-500 to-amber-700",
@@ -131,7 +132,7 @@ function Podium({ d, rank }) {
       </div>
 
       {/* card */}
-      <CardTag {...(hasLink ? { to: "/group/" + d.id } : {})} style={{ display: "block", position: "relative", marginTop: "clamp(24px, 2.6vw, 48px)", borderRadius: "clamp(16px, 1.8vw, 26px)", overflow: "hidden", padding: "clamp(26px, 3.2vw, 52px) clamp(12px, 1.6vw, 26px) clamp(16px, 1.8vw, 30px)", background: c.cardBg, border: `1px solid ${c.cardBorder}`, boxShadow: `0 40px 80px -34px rgba(0,0,0,0.95), 0 0 44px -12px ${c.cardGlow}, inset 0 1px 0 rgba(255,240,210,0.06)`, cursor: hasLink ? "pointer" : "default" }}>
+      <CardTag {...(hasLink ? { to: "/group/" + d.id, onMouseEnter: () => apiFetch("/api/group/" + d.id) } : {})} style={{ display: "block", position: "relative", marginTop: "clamp(24px, 2.6vw, 48px)", borderRadius: "clamp(16px, 1.8vw, 26px)", overflow: "hidden", padding: "clamp(26px, 3.2vw, 52px) clamp(12px, 1.6vw, 26px) clamp(16px, 1.8vw, 30px)", background: c.cardBg, border: `1px solid ${c.cardBorder}`, boxShadow: `0 40px 80px -34px rgba(0,0,0,0.95), 0 0 44px -12px ${c.cardGlow}, inset 0 1px 0 rgba(255,240,210,0.06)`, cursor: hasLink ? "pointer" : "default" }}>
         <div style={{ ...ov, background: `linear-gradient(180deg, ${c.sheen} 0%, transparent 26%)` }} />
         <div style={{ ...ov, background: `radial-gradient(90% 60% at 50% 118%, ${c.leak} 0%, transparent 64%)` }} />
         <div style={{ ...ov, backgroundImage: c.embers }} />
@@ -223,7 +224,22 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [] }) {
 
 export default function App() {
   useGlobalZoom();
-  const [rows, setRows] = useState([]);
+  const statsRes = useApi("/api/all-groups-stats");
+  const rows = useMemo(() => (statsRes?.data || []).map((g, i) => {
+    const calls = g.total_members || 0;
+    const avg = calls > 0 ? (g.total_current_stat || 0) / calls : 0;
+    return {
+      id: g.group_id,
+      name: g.group_name || "Unknown",
+      win: Math.round(g.win_rate || 0),
+      avg: avg.toFixed(1),
+      high: g.max_current_stat || 0,
+      calls: calls,
+      duels: g.total_wins || 0,
+      img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
+      g: gradOf(i), e: emojiOf(i),
+    };
+  }), [statsRes]);
   const [lbCollapsed, setLbCollapsed] = useState(false);
   const [lbLg, setLbLg] = useState(typeof window !== "undefined" && window.matchMedia("(min-width:1024px)").matches);
   useEffect(() => {
@@ -244,26 +260,6 @@ export default function App() {
     ro.observe(el);
     window.addEventListener("resize", measure);
     return () => { ro.disconnect(); window.removeEventListener("resize", measure); };
-  }, []);
-  useEffect(() => {
-    fetch("/api/all-groups-stats").then(r => r.json()).then(res => {
-      const data = (res.data || []).map((g, i) => {
-        const calls = g.total_members || 0;
-        const avg = calls > 0 ? (g.total_current_stat || 0) / calls : 0;
-        return {
-          id: g.group_id,
-          name: g.group_name || "Unknown",
-          win: Math.round(g.win_rate || 0),
-          avg: avg.toFixed(1),
-          high: g.max_current_stat || 0,
-          calls: calls,
-          duels: g.total_wins || 0,
-          img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
-          g: gradOf(i), e: emojiOf(i),
-        };
-      });
-      setRows(data);
-    }).catch(() => {});
   }, []);
   const top3 = rows.slice(0, 3);
 
@@ -331,7 +327,7 @@ export default function App() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ ...VAL, fontWeight: 700, fontSize: "clamp(18px,1.2vw,24px)", color: rankColor }}>{rank}</span>
                     </div>
-                    <RowTag {...(d.id ? { to: "/group/" + d.id } : {})} className={"flex items-center gap-3 min-w-0" + (d.id ? " cursor-pointer group/row" : "")}>
+                    <RowTag {...(d.id ? { to: "/group/" + d.id, onMouseEnter: () => apiFetch("/api/group/" + d.id) } : {})} className={"flex items-center gap-3 min-w-0" + (d.id ? " cursor-pointer group/row" : "")}>
                       <Avatar src={d.img} g={d.g} e={d.e} className="w-[clamp(40px,3vw,56px)] h-[clamp(40px,3vw,56px)] rounded-[11px] text-lg shrink-0" />
                       <span className="truncate group-hover/row:underline" style={{ fontFamily: MONO, fontSize: "clamp(15px,1vw,19px)", fontWeight: 600, letterSpacing: "-0.012em", color: "#F5F5F5" }}>{d.name}</span>
                     </RowTag>

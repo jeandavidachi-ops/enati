@@ -2,6 +2,7 @@
    Boutons Sign In/Up -> Connect Telegram -> carte de rang, + modales via portal. */
 import React, { useState as vsUseState, useEffect as vsUseEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { apiFetch, apiGet, apiSet } from '../lib/api.js'
 
 ;(function injectAuthStyles() {
   if (typeof document === 'undefined') return
@@ -286,15 +287,17 @@ function VsRankCardButton({ user }) {
 
 /* Drop-in pour le header. Gère son propre état auth + modales (portées vers body). */
 export default function AuthCorner() {
-  const [user, setUser] = vsUseState(null)
+  const [user, setUser] = vsUseState(() => apiGet("/api/auth/me")?.user ?? null)
   const [modal, setModal] = vsUseState(null) // "login" | "signup" | null
   vsUseEffect(() => {
-    fetch("/api/auth/me").then((r) => r.json()).then((d) => setUser(d.user)).catch(() => {})
+    apiFetch("/api/auth/me").then((d) => setUser(d.user)).catch(() => {})
   }, [])
+  // Applique un user authentifié + amorce le cache /api/auth/me (évite un état périmé au remount).
+  const applyUser = (u) => { setUser(u); apiSet("/api/auth/me", { user: u }) }
   const modalEl = modal === "login" ? (
-    <VsLoginModal onClose={() => setModal(null)} onSwitch={() => setModal("signup")} onAuthed={(u) => { setUser(u); setModal(null) }} />
+    <VsLoginModal onClose={() => setModal(null)} onSwitch={() => setModal("signup")} onAuthed={(u) => { applyUser(u); setModal(null) }} />
   ) : modal === "signup" ? (
-    <VsSignupModal onClose={() => setModal(null)} onSwitch={() => setModal("login")} onAuthed={(u) => { setUser(u); setModal(null) }} />
+    <VsSignupModal onClose={() => setModal(null)} onSwitch={() => setModal("login")} onAuthed={(u) => { applyUser(u); setModal(null) }} />
   ) : null
   return (
     <div className="flex items-center gap-3">
@@ -304,7 +307,7 @@ export default function AuthCorner() {
           <button onClick={() => setModal("signup")} className="text-sm px-4 py-2 rounded-full bg-white text-black font-semibold hover:bg-zinc-200 transition">Sign Up</button>
         </>
       ) : !user.telegram ? (
-        <VsTelegramButton onConnected={setUser} />
+        <VsTelegramButton onConnected={applyUser} />
       ) : (
         <VsRankCardButton user={user} />
       )}

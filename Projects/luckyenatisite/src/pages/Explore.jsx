@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
+import { useApi, apiFetch } from '../lib/api.js'
 
 // ---- Helpers ----
 const GRADS = [
@@ -54,12 +55,18 @@ function BlocksThumb({ src, g, e }) {
     </div>
   );
 }
+// Precharge la page detail correspondant a un href de carte (survol).
+function prefetchDetail(href) {
+  if (!href) return;
+  if (href.startsWith("/group/")) apiFetch("/api/group/" + href.slice(7));
+  else if (href.startsWith("/ticker/")) apiFetch("/api/token/" + href.slice(8));
+}
 function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, telegram }) {
   const Tag = href ? Link : "article";
   // Ouvre le lien social sans declencher la navigation de la card (evite l'<a> imbrique).
   const openSocial = (url) => (ev) => { ev.preventDefault(); ev.stopPropagation(); window.open(url, "_blank", "noopener"); };
   return (
-    <Tag {...(href ? { to: href } : {})}
+    <Tag {...(href ? { to: href, onMouseEnter: () => prefetchDetail(href) } : {})}
       className={"relative w-full block overflow-hidden rounded-[20px]" + (href ? " cursor-pointer transition-colors hover:border-white/30" : "")}
       style={{
         padding: "16px 18px 15px 15px",
@@ -147,69 +154,69 @@ const PAGE_SIZE = 24;
 export default function App({ type = "group" }) {
   useGlobalZoom();
   const TYPE = type;
-  const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
-  const [sharedMap, setSharedMap] = useState({});
+  const [tokenImgs, setTokenImgs] = useState({}); // addr -> { img, twitter, telegram }
 
-  // Chargement des donnees selon le type (recharge quand on passe /group <-> /ticker)
-  useEffect(() => {
-    setItems([]);
-    setPage(1);
+  // Donnees depuis le cache (rendu instantane si prechargees) selon le type.
+  const groupsRes = useApi(TYPE === "group" ? "/api/all-groups-stats" : null);
+  const latestRes = useApi(TYPE === "ticker" ? "/api/latest-records" : null);
+  const sharedRes = useApi(TYPE === "ticker" ? "/api/shared-contracts" : null);
+
+  const sharedMap = useMemo(() => {
+    const map = {};
+    (sharedRes?.data || []).forEach(c => { if (c.contract_address) map[String(c.contract_address).toLowerCase()] = c.groups_count; });
+    return map;
+  }, [sharedRes]);
+
+  const items = useMemo(() => {
     if (TYPE === "group") {
-      fetch("/api/all-groups-stats").then(r => r.json()).then(res => {
-        const all = res.data || [];
-        setItems(all.map((g, i) => ({
-          id: g.group_id,
-          name: g.group_name || "Unknown",
-          win: Math.round(g.win_rate || 0),
-          best: g.max_current_stat || 0,
-          calls: g.total_members || 0,
-          img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
-          g: gradOf(i), e: emojiOf(i),
-        })));
-      }).catch(() => {});
-    } else {
-      fetch("/api/shared-contracts").then(r => r.json()).then(res => {
-        const map = {};
-        (res.data || []).forEach(c => { if (c.contract_address) map[String(c.contract_address).toLowerCase()] = c.groups_count; });
-        setSharedMap(map);
-      }).catch(() => {});
-      fetch("/api/latest-records").then(r => r.json()).then(res => {
-        const all = res.data || [];
-        setItems(all.map((c, i) => ({
-          sym: c.coin_name || "?",
-          mc: fmtMC(c.market_cap),
-          mult: c.current_stat || 0,
-          addr: c.contract_address,
-          img: null,
-          g: gradOf(i + 3), e: emojiOf(i + 5),
-        })));
-      }).catch(() => {});
+      return (groupsRes?.data || []).map((g, i) => ({
+        id: g.group_id,
+        name: g.group_name || "Unknown",
+        win: Math.round(g.win_rate || 0),
+        best: g.max_current_stat || 0,
+        calls: g.total_members || 0,
+        img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
+        g: gradOf(i), e: emojiOf(i),
+      }));
     }
-  }, [TYPE]);
+    return (latestRes?.data || []).map((c, i) => {
+      const im = tokenImgs[c.contract_address] || {};
+      return {
+        sym: c.coin_name || "?",
+        mc: fmtMC(c.market_cap),
+        mult: c.current_stat || 0,
+        addr: c.contract_address,
+        img: im.img || null,
+        twitter: im.twitter || null,
+        telegram: im.telegram || null,
+        g: gradOf(i + 3), e: emojiOf(i + 5),
+      };
+    });
+  }, [TYPE, groupsRes, latestRes, tokenImgs]);
+
+  // Retour a la page 1 quand on change de type (/group <-> /ticker)
+  useEffect(() => { setPage(1); }, [TYPE]);
 
   const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const start = (page - 1) * PAGE_SIZE;
   const pageItems = items.slice(start, start + PAGE_SIZE);
 
-  // Images des tokens: seulement pour la page visible (tickers)
+  // Images des tokens: seulement pour la page visible (tickers), mises en cache
   useEffect(() => {
     if (TYPE !== "ticker") return;
-    pageItems.forEach((t, k) => {
-      const idx = start + k;
-      if (!t.addr || t.img) return;
-      fetch("/api/token-image/" + encodeURIComponent(t.addr)).then(r => r.json()).then(img => {
+    pageItems.forEach((t) => {
+      if (!t.addr || tokenImgs[t.addr]) return;
+      apiFetch("/api/token-image/" + encodeURIComponent(t.addr)).then(img => {
         if (img && img.success) {
-          setItems(prev => prev.map((x, j) => j === idx ? {
-            ...x,
-            img: img.image_url || x.img,
-            twitter: img.twitter || null,
-            telegram: img.telegram || null,
-          } : x));
+          setTokenImgs(prev => (prev[t.addr] ? prev : {
+            ...prev,
+            [t.addr]: { img: img.image_url || null, twitter: img.twitter || null, telegram: img.telegram || null },
+          }));
         }
       }).catch(() => {});
     });
-  }, [page, items.length]);
+  }, [TYPE, page, latestRes]);
 
   const go = (n) => { const p = Math.min(pageCount, Math.max(1, n)); setPage(p); window.scrollTo(0, 0); };
 
