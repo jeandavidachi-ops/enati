@@ -135,6 +135,8 @@ def _public_user(u):
         'email': u.get('email'),
         'name': u.get('name'),
         'telegram': u.get('telegram'),
+        # Dernier snapshot des stats (persiste) -> pre-affichage instantane cote UI.
+        'stats': u.get('stats'),
     }
 
 

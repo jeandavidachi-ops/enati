@@ -159,9 +159,12 @@ function YourCallsCard({ rows }) {
 // --- Page ----------------------------------------------------------------
 export default function Profile() {
   const data = useApi('/api/me/profile')
-  const tg = data?.telegram || {}
-  const stats = data?.stats || {}
-  const name = tg.firstName || (tg.username ? '@' + tg.username : (data?.name || 'You'))
+  // Snapshot en cache (/api/auth/me) -> pre-affichage instantane (header + stats +
+  // anneau Win Rate) avant que le profil complet ne charge (stale-while-revalidate).
+  const me = useApi('/api/auth/me')?.user
+  const tg = data?.telegram || me?.telegram || {}
+  const stats = data?.stats || me?.stats || {}
+  const name = tg.firstName || (tg.username ? '@' + tg.username : (data?.name || me?.name || 'You'))
   const handle = tg.username ? '@' + tg.username : ''
 
   return (

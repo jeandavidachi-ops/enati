@@ -371,7 +371,7 @@ export default function AuthCorner() {
       ) : !user.telegram ? (
         <VsTelegramButton onConnected={applyUser} />
       ) : (
-        <VsAccountMenu user={user} onLogout={logout} stats={statsData} />
+        <VsAccountMenu user={user} onLogout={logout} stats={statsData || user.stats} />
       )}
       {modalEl && createPortal(modalEl, document.body)}
     </div>
