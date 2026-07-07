@@ -263,9 +263,15 @@ function VsRankCardButton({ user, stats }) {
   const scans = stats?.scans ?? 0
   const wins = stats?.wins ?? 0
   const defeats = stats?.defeats ?? 0
+  const tgId = user.telegram && user.telegram.id
   return (
     <button className="vs-rc-btn" type="button" aria-label={"Open " + name + " profile"}>
-      <div className="vs-rc-avatar" aria-hidden="true"><div className="h"></div><div className="b"></div></div>
+      <div className="vs-rc-avatar" aria-hidden="true">
+        {tgId
+          ? <img src={"/api/user-photo/" + tgId} alt="" onError={(e) => { e.currentTarget.style.display = "none" }}
+              style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
+          : <><div className="h"></div><div className="b"></div></>}
+      </div>
       <div style={{ textAlign: "left", minWidth: 0 }}>
         <div className="vs-rc-name">{name}</div>
         <div className="vs-rc-stats">

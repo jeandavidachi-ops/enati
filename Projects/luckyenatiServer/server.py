@@ -67,7 +67,9 @@ users_collection = db['coins']
 # Token du bot (cote serveur uniquement) pour proxifier les photos de groupe sans l'exposer.
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 _group_photo_cache = {}          # group_id -> (bytes, content_type, timestamp)
+_user_photo_cache = {}           # tg_id -> (bytes, content_type, timestamp)
 GROUP_PHOTO_TTL = 3600           # 1h
+USER_PHOTO_TTL = 3600            # 1h
 
 
 # =====================================================================
@@ -341,6 +343,64 @@ def group_photo(group_id):
     except requests.RequestException as e:
         logger.warning(f"group photo proxy failed for {gid}: {e}")
         abort(404)
+
+
+@app.route('/api/user-photo/<tg_id>', methods=['GET'])
+def user_photo(tg_id):
+    """Renvoie la photo de profil Telegram d'un user, recuperee cote serveur
+    (le BOT_TOKEN reste cote serveur). Prefere l'URL stockee (Login Widget),
+    sinon getUserProfilePhotos via le bot. 404 si indisponible/privee."""
+    try:
+        uid = int(tg_id)
+    except (TypeError, ValueError):
+        abort(404)
+
+    cached = _user_photo_cache.get(uid)
+    if cached and (time.time() - cached[2] < USER_PHOTO_TTL):
+        return Response(cached[0], mimetype=cached[1])
+
+    def _serve(content, content_type):
+        if not content_type or not content_type.startswith('image/'):
+            content_type = 'image/jpeg'
+        _user_photo_cache[uid] = (content, content_type, time.time())
+        return Response(content, mimetype=content_type)
+
+    # 1) URL deja stockee sur le compte (cas Login Widget) -> fetch cote serveur.
+    doc = app_users.find_one({'telegram.id': uid}, {'telegram.photoUrl': 1})
+    stored = ((doc or {}).get('telegram') or {}).get('photoUrl')
+    if stored and isinstance(stored, str) and stored.startswith('http'):
+        try:
+            img = requests.get(stored, timeout=15)
+            if img.status_code == 200 and img.content:
+                return _serve(img.content, img.headers.get('Content-Type', 'image/jpeg'))
+        except requests.RequestException:
+            pass  # fallback ci-dessous
+
+    # 2) Fallback : getUserProfilePhotos -> getFile -> download (necessite BOT_TOKEN).
+    if not BOT_TOKEN:
+        abort(404)
+    try:
+        photos = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/getUserProfilePhotos',
+                              params={'user_id': uid, 'limit': 1}, timeout=10).json()
+        sets = (photos.get('result') or {}).get('photos') or []
+        if not sets or not sets[0]:
+            abort(404)
+        file_id = sets[0][-1].get('file_id')  # derniere taille = la plus grande
+        if not file_id:
+            abort(404)
+        finfo = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/getFile',
+                             params={'file_id': file_id}, timeout=10).json()
+        file_path = (finfo.get('result') or {}).get('file_path')
+        if not file_path:
+            abort(404)
+        img = requests.get(f'https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}', timeout=15)
+        if img.status_code != 200:
+            abort(404)
+        return _serve(img.content, img.headers.get('Content-Type', 'image/jpeg'))
+    except requests.RequestException as e:
+        logger.warning(f"user photo proxy failed for {uid}: {e}")
+        abort(404)
+
 
 def get_top_groups_by_wins():
     # Use an aggregation pipeline to group by group_id, sum the fields, and sort by wins
@@ -1019,13 +1079,14 @@ def _groups_created_count(tg_id, force=False):
     return count
 
 
-def _dex_mcap_now_batch(addresses):
-    """Market cap actuel par adresse via DexScreener (batch, <=30). Retourne
-    {address_lower: mcap_or_None}. Echoue proprement (dict vide) si reseau KO."""
-    out = {}
+def _dex_token_info_batch(addresses):
+    """Infos live par adresse via DexScreener (batch, <=30) : market cap + image.
+    Retourne {address_lower: {'mcap': float|None, 'image': str|None}}.
+    Echoue proprement (dict vide) si reseau KO."""
+    best = {}  # addr -> (liq, mcap, image)
     addrs = [a for a in dict.fromkeys(a for a in addresses if a)][:30]
     if not addrs:
-        return out
+        return {}
     try:
         url = f'https://api.dexscreener.com/latest/dex/tokens/{",".join(addrs)}'
         resp = requests.get(url, timeout=15)
@@ -1035,14 +1096,15 @@ def _dex_mcap_now_batch(addresses):
                 if not addr:
                     continue
                 mcap = _to_float(p.get('marketCap')) or _to_float(p.get('fdv'))
+                image = (p.get('info') or {}).get('imageUrl')
                 liq = _to_float((p.get('liquidity') or {}).get('usd')) or 0
                 # On garde la paire la plus liquide par token.
-                prev = out.get(addr)
-                if mcap is not None and (prev is None or liq > prev[1]):
-                    out[addr] = (mcap, liq)
+                prev = best.get(addr)
+                if prev is None or liq > prev[0]:
+                    best[addr] = (liq, mcap, image)
     except requests.RequestException as e:
-        logger.warning(f"DexScreener batch mcap failed: {e}")
-    return {a: v[0] for a, v in out.items()}
+        logger.warning(f"DexScreener batch token info failed: {e}")
+    return {a: {'mcap': v[1], 'image': v[2]} for a, v in best.items()}
 
 
 def _persist_user_stats(user, extra):
@@ -1106,14 +1168,15 @@ def get_me_profile():
     group_docs = list(users_collection.find(
         {'group_id': {'$in': joined_ids}}).sort('creation_time', -1).limit(15)) if joined_ids else []
 
-    # Market cap live (batch) pour le PnL des calls affiches.
+    # Infos live (batch) : market cap (pour le PnL) + image du token.
     addrs = [d.get('contract_address') for d in (your_docs + group_docs)]
-    mcap_now_by_addr = _dex_mcap_now_batch(addrs)
+    info_by_addr = _dex_token_info_batch(addrs)
 
     def _row(d):
         addr = d.get('contract_address') or ''
+        info = info_by_addr.get(addr.lower()) or {}
         mcap_then = _to_float(d.get('market_cap'))
-        mcap_now = mcap_now_by_addr.get(addr.lower())
+        mcap_now = info.get('mcap')
         if mcap_now is not None and mcap_then:
             pnl_pct = round((mcap_now / mcap_then - 1) * 100, 2)
         else:
@@ -1123,6 +1186,7 @@ def get_me_profile():
             'symbol': d.get('coin_name') or 'Unknown',
             'name': d.get('coin_name') or 'Unknown',
             'contract': addr,
+            'image': info.get('image'),
             'mcap_then': mcap_then,
             'mcap_now': mcap_now,
             'pnl_pct': pnl_pct,

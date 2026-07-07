@@ -82,10 +82,13 @@ function WinRateCard({ stats }) {
   )
 }
 
-function TokenCell({ symbol, size = 26 }) {
+function TokenCell({ symbol, image, size = 26 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span style={{ width: size, height: size, borderRadius: '50%', background: '#1b2022', flexShrink: 0 }}></span>
+      {image
+        ? <img src={image} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }}
+            style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, objectFit: 'cover', background: '#1b2022' }} />
+        : <span style={{ width: size, height: size, borderRadius: '50%', background: '#1b2022', flexShrink: 0 }}></span>}
       <span style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>{symbol}</span>
     </div>
   )
@@ -108,7 +111,7 @@ function GroupCallsCard({ rows }) {
       {rows.length === 0 && <div style={{ padding: '20px 0', color: '#7a8085', fontSize: 14 }}>No calls yet.</div>}
       {rows.map((r, i) => (
         <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #191d1f' }}>
-          <TokenCell symbol={r.symbol} />
+          <TokenCell symbol={r.symbol} image={r.image} />
           <div><div style={{ fontSize: 14, color: '#e6e8ea' }}>{fmtMc(r.mcap_then)}</div><div style={{ fontSize: 12, color: '#7a8085', marginTop: 2 }}>{r.ago}</div></div>
           <div style={{ fontSize: 14, color: '#e6e8ea' }}>{fmtMc(r.mcap_now)}</div>
           <div style={{ fontSize: 13, color: '#787e83' }}>{r.caller_username ? '@' + r.caller_username : '—'}</div>
@@ -139,7 +142,7 @@ function YourCallsCard({ rows }) {
         const pnl = fmtPnl(r.pnl_pct)
         return (
           <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #17191b' }}>
-            <TokenCell symbol={r.symbol} size={30} />
+            <TokenCell symbol={r.symbol} image={r.image} size={30} />
             <div><div style={{ fontSize: 14, color: '#e6e8ea' }}>{fmtMc(r.mcap_then)}</div><div style={{ fontSize: 12, color: '#7a8085', marginTop: 2 }}>{r.ago}</div></div>
             <div style={{ fontSize: 14, color: '#e6e8ea' }}>{fmtMc(r.mcap_now)}</div>
             <div style={{ textAlign: 'right' }}><div style={{ fontSize: 14, fontWeight: 600, color: pnl.color }}>{pnl.text}</div></div>
@@ -165,8 +168,9 @@ export default function Profile() {
 
           {/* Header */}
           <div style={{ ...CARD, gridColumn: '1 / -1', width: '100%', padding: '22px 28px', display: 'flex', alignItems: 'center', gap: 20 }}>
-            {tg.photoUrl
-              ? <img src={tg.photoUrl} alt="" style={{ width: 68, height: 68, borderRadius: '50%', flexShrink: 0, objectFit: 'cover' }} />
+            {tg.id
+              ? <img src={`/api/user-photo/${tg.id}`} alt="" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }}
+                  style={{ width: 68, height: 68, borderRadius: '50%', flexShrink: 0, objectFit: 'cover', background: 'radial-gradient(circle at 50% 40%,#1b2022,#0d1011)' }} />
               : <div style={{ width: 68, height: 68, borderRadius: '50%', flexShrink: 0, background: 'radial-gradient(circle at 50% 40%,#1b2022,#0d1011)' }}></div>}
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 24, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{name}</div>
