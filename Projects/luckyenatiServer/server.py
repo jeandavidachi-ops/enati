@@ -905,14 +905,15 @@ def _tg_join_link(group_id):
         if username:
             link = f'https://t.me/{username}'
         else:
-            # Lien deja existant sur la fiche du chat (si le bot y a acces)...
-            link = result.get('invite_link')
-            if not link:
-                # ... sinon on tente d'en creer un (necessite bot admin + droit inviter).
-                inv = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/createChatInviteLink',
-                                   params={'chat_id': group_id}, timeout=8).json()
-                if inv.get('ok'):
-                    link = (inv.get('result') or {}).get('invite_link')
+            # Groupe prive : on cree un lien qui declenche une DEMANDE d'adhesion
+            # (approbation admin requise), jamais un join direct. On ne reutilise
+            # pas le invite_link primaire du chat car celui-ci fait rejoindre
+            # directement. Echoue proprement (-> None) si le bot n'est pas admin.
+            inv = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/createChatInviteLink',
+                               params={'chat_id': group_id, 'creates_join_request': 'true'},
+                               timeout=8).json()
+            if inv.get('ok'):
+                link = (inv.get('result') or {}).get('invite_link')
     except requests.RequestException as e:
         logger.warning(f"join link resolve failed for {group_id}: {e}")
     _join_link_cache[group_id] = (link, time.time())
