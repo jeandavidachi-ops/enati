@@ -10,6 +10,7 @@ import hmac
 from flask import Flask, jsonify, request, Response, abort, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from pymongo import MongoClient
+from bson.binary import Binary
 from datetime import datetime, timedelta
 import logging
 import requests
@@ -67,9 +68,36 @@ users_collection = db['coins']
 # Token du bot (cote serveur uniquement) pour proxifier les photos de groupe sans l'exposer.
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 _group_photo_cache = {}          # group_id -> (bytes, content_type, timestamp)
-_user_photo_cache = {}           # tg_id -> (bytes, content_type, timestamp)
 GROUP_PHOTO_TTL = 3600           # 1h
-USER_PHOTO_TTL = 3600            # 1h
+
+# Stockage PERSISTANT des images (photos users, logos tokens) en base MongoDB.
+# Une image telechargee une fois est conservee -> on ne rappelle jamais la source
+# (Telegram / DexScreener) tant qu'elle est en base. Cle = 'user:<tg_id>' /
+# 'token:<contract_lower>'.
+media_collection = db['media']
+
+
+def _media_get(key):
+    """Doc image en base (ou None)."""
+    return media_collection.find_one({'_id': key})
+
+
+def _media_put(key, data, content_type, src_url=None):
+    """Enregistre/ecrase une image en base (bytes + content_type)."""
+    if not content_type or not content_type.startswith('image/'):
+        content_type = 'image/jpeg'  # Telegram renvoie parfois octet-stream
+    doc = {'_id': key, 'data': Binary(data), 'content_type': content_type,
+           'updated_at': time.time()}
+    if src_url is not None:
+        doc['src_url'] = src_url
+    media_collection.replace_one({'_id': key}, doc, upsert=True)
+
+
+def _media_set_src(key, src_url):
+    """Memorise l'URL source d'une image (indice) sans toucher aux bytes stockes."""
+    if not src_url:
+        return
+    media_collection.update_one({'_id': key}, {'$set': {'src_url': src_url}}, upsert=True)
 
 
 # =====================================================================
@@ -347,36 +375,40 @@ def group_photo(group_id):
 
 @app.route('/api/user-photo/<tg_id>', methods=['GET'])
 def user_photo(tg_id):
-    """Renvoie la photo de profil Telegram d'un user, recuperee cote serveur
-    (le BOT_TOKEN reste cote serveur). Prefere l'URL stockee (Login Widget),
-    sinon getUserProfilePhotos via le bot. 404 si indisponible/privee."""
+    """Photo de profil Telegram d'un user. Servie depuis la base (collection
+    'media') si deja stockee ; sinon recuperee cote serveur (URL Login Widget ou
+    getUserProfilePhotos) PUIS stockee. ?refresh=1 force le re-telechargement.
+    404 si indisponible/privee."""
     try:
         uid = int(tg_id)
     except (TypeError, ValueError):
         abort(404)
+    key = f'user:{uid}'
+    refresh = request.args.get('refresh') in ('1', 'true', 'yes')
 
-    cached = _user_photo_cache.get(uid)
-    if cached and (time.time() - cached[2] < USER_PHOTO_TTL):
-        return Response(cached[0], mimetype=cached[1])
+    # 1) Deja en base -> on sert, aucun appel reseau.
+    if not refresh:
+        doc = _media_get(key)
+        if doc and doc.get('data'):
+            return Response(bytes(doc['data']), mimetype=doc.get('content_type', 'image/jpeg'))
 
-    def _serve(content, content_type):
-        if not content_type or not content_type.startswith('image/'):
-            content_type = 'image/jpeg'
-        _user_photo_cache[uid] = (content, content_type, time.time())
-        return Response(content, mimetype=content_type)
+    def _store_and_serve(content, content_type, src_url=None):
+        _media_put(key, content, content_type, src_url=src_url)
+        stored = _media_get(key)
+        return Response(bytes(stored['data']), mimetype=stored.get('content_type', 'image/jpeg'))
 
-    # 1) URL deja stockee sur le compte (cas Login Widget) -> fetch cote serveur.
-    doc = app_users.find_one({'telegram.id': uid}, {'telegram.photoUrl': 1})
-    stored = ((doc or {}).get('telegram') or {}).get('photoUrl')
-    if stored and isinstance(stored, str) and stored.startswith('http'):
+    # 2) URL deja stockee sur le compte (cas Login Widget) -> fetch cote serveur.
+    acc = app_users.find_one({'telegram.id': uid}, {'telegram.photoUrl': 1})
+    stored_url = ((acc or {}).get('telegram') or {}).get('photoUrl')
+    if stored_url and isinstance(stored_url, str) and stored_url.startswith('http'):
         try:
-            img = requests.get(stored, timeout=15)
+            img = requests.get(stored_url, timeout=15)
             if img.status_code == 200 and img.content:
-                return _serve(img.content, img.headers.get('Content-Type', 'image/jpeg'))
+                return _store_and_serve(img.content, img.headers.get('Content-Type', 'image/jpeg'), stored_url)
         except requests.RequestException:
             pass  # fallback ci-dessous
 
-    # 2) Fallback : getUserProfilePhotos -> getFile -> download (necessite BOT_TOKEN).
+    # 3) Fallback : getUserProfilePhotos -> getFile -> download (necessite BOT_TOKEN).
     if not BOT_TOKEN:
         abort(404)
     try:
@@ -396,9 +428,58 @@ def user_photo(tg_id):
         img = requests.get(f'https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}', timeout=15)
         if img.status_code != 200:
             abort(404)
-        return _serve(img.content, img.headers.get('Content-Type', 'image/jpeg'))
+        return _store_and_serve(img.content, img.headers.get('Content-Type', 'image/jpeg'))
     except requests.RequestException as e:
         logger.warning(f"user photo proxy failed for {uid}: {e}")
+        abort(404)
+
+
+@app.route('/api/token-photo/<path:address>', methods=['GET'])
+def token_photo(address):
+    """Logo d'un token. Servi depuis la base (collection 'media') si deja stocke ;
+    sinon resolu via DexScreener (info.imageUrl) PUIS stocke. ?refresh=1 force.
+    404 (placeholder cote front) si aucun logo."""
+    addr = (address or '').strip()
+    if not addr:
+        abort(404)
+    key = f'token:{addr.lower()}'
+    refresh = request.args.get('refresh') in ('1', 'true', 'yes')
+
+    doc = _media_get(key)
+    # 1) Deja en base -> on sert.
+    if not refresh and doc and doc.get('data'):
+        return Response(bytes(doc['data']), mimetype=doc.get('content_type', 'image/jpeg'))
+
+    # 2) URL source : indice deja memorise, sinon DexScreener single-token.
+    src_url = (doc or {}).get('src_url')
+    if not src_url:
+        try:
+            resp = requests.get(f'https://api.dexscreener.com/latest/dex/tokens/{addr}', timeout=15)
+            if resp.status_code == 200:
+                addr_l = addr.lower()
+                best_liq = -1
+                for p in (resp.json() or {}).get('pairs') or []:
+                    if ((p.get('baseToken') or {}).get('address') or '').lower() != addr_l:
+                        continue
+                    img_url = (p.get('info') or {}).get('imageUrl')
+                    liq = _to_float((p.get('liquidity') or {}).get('usd')) or 0
+                    if img_url and liq > best_liq:
+                        src_url, best_liq = img_url, liq
+        except requests.RequestException as e:
+            logger.warning(f"token photo resolve failed for {addr}: {e}")
+    if not src_url:
+        abort(404)
+
+    # 3) Download + stockage.
+    try:
+        img = requests.get(src_url, timeout=15)
+        if img.status_code != 200 or not img.content:
+            abort(404)
+        _media_put(key, img.content, img.headers.get('Content-Type', 'image/jpeg'), src_url=src_url)
+        stored = _media_get(key)
+        return Response(bytes(stored['data']), mimetype=stored.get('content_type', 'image/jpeg'))
+    except requests.RequestException as e:
+        logger.warning(f"token photo download failed for {addr}: {e}")
         abort(404)
 
 
@@ -1182,11 +1263,19 @@ def get_me_profile():
         else:
             cs = _to_float(d.get('current_stat'))
             pnl_pct = round((cs - 1) * 100, 2) if cs else None
+        # Logo connu (soit deja en base, soit renvoye par DexScreener) -> on pointe
+        # vers notre proxy (qui sert depuis la base). Sinon pas d'image (placeholder),
+        # ce qui evite un appel DexScreener inutile pour un token sans logo.
+        stored_media = _media_get(f'token:{addr.lower()}') if addr else None
+        has_logo = bool(info.get('image')) or bool(stored_media and stored_media.get('data'))
+        if addr and info.get('image'):
+            # Memorise l'URL (indice) -> /api/token-photo telechargera sans re-appeler DexScreener.
+            _media_set_src(f'token:{addr.lower()}', info['image'])
         return {
             'symbol': d.get('coin_name') or 'Unknown',
             'name': d.get('coin_name') or 'Unknown',
             'contract': addr,
-            'image': info.get('image'),
+            'image': (f'/api/token-photo/{addr}' if (addr and has_logo) else None),
             'mcap_then': mcap_then,
             'mcap_now': mcap_now,
             'pnl_pct': pnl_pct,
