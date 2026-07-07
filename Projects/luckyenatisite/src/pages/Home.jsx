@@ -376,6 +376,15 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [], onSel
 // Profil d'un user affiche inline (a la place de Popular Groups/Tickers) au clic
 // sur une ligne du leaderboard. Isole dans son propre composant pour que le hook
 // useApi ne soit pas appele conditionnellement dans Versus.
+function Spinner() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: "80px 0", color: "#7a8085" }}>
+      <span style={{ width: 34, height: 34, borderRadius: "50%", border: "3px solid rgba(255,255,255,0.12)", borderTopColor: "#e6e8ea", display: "inline-block", animation: "vs-spin 0.7s linear infinite" }} />
+      <span style={{ fontSize: 13 }}>Loading profile…</span>
+      <style>{"@keyframes vs-spin{to{transform:rotate(360deg)}}"}</style>
+    </div>
+  );
+}
 function InlineUserProfile({ id, onClose }) {
   const data = useApi("/api/user/" + id + "/profile");
   return (
@@ -385,7 +394,9 @@ function InlineUserProfile({ id, onClose }) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M19 12H5M11 18l-6-6 6-6" /></svg>
         Back
       </button>
-      {data && data.success === false
+      {data === undefined
+        ? <Spinner />
+        : data.success === false
         ? <p className="text-sm text-zinc-500">User not found.</p>
         : <ProfileContent data={data} />}
     </section>
