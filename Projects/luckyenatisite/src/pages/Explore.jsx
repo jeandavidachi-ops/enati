@@ -46,7 +46,7 @@ function BlocksThumb({ src, g, e }) {
   const [err, setErr] = useState(false);
   return (
     <div className="relative self-stretch w-[clamp(112px,8vw,150px)] min-h-[clamp(112px,8vw,150px)] flex-none overflow-hidden rounded-[16px] bg-[#0d0d0d]"
-      style={{ boxShadow: "0 10px 26px rgba(0,0,0,0.42), inset 0 0 0 1px rgba(255,255,255,0.05)" }}>
+      style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.05)" }}>
       {src && !err
         ? <img src={src} onError={() => setErr(true)} className="absolute inset-0 w-full h-full object-cover" />
         : <VsLogo className="absolute inset-0 w-full h-full" />}
@@ -88,7 +88,7 @@ function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, teleg
         padding: "16px 18px 15px 15px",
         background: "radial-gradient(ellipse at 49% -20%, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.012) 34%, transparent 58%), linear-gradient(180deg, rgba(25,26,28,0.78) 0%, rgba(11,12,13,0.94) 44%, rgba(15,16,17,0.92) 100%)",
         border: "1.5px solid rgba(154,160,171,0.38)",
-        boxShadow: "0 14px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -22px 46px rgba(255,255,255,0.02)"
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -22px 46px rgba(255,255,255,0.02)"
       }}>
       <div className="relative flex gap-4">
         <BlocksThumb src={image} g={g} e={e} />
