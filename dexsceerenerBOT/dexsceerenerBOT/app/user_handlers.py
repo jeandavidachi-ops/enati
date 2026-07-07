@@ -245,8 +245,12 @@ async def handle_contract_address(message: Message, state: FSMContext):
         else:
             group_photo = 'None'
 
+        image_url = dex.get_token_image_url(address)
         md.add_or_update_coin(address, coin_name, marketcap, 0, 0, 0, creation_time, group_username, group_id, group_photo,
-                              caller_id=caller_id, caller_username=caller_username, caller_name=caller_name)
+                              caller_id=caller_id, caller_username=caller_username, caller_name=caller_name,
+                              coin_image=image_url)
+        # Stocke le logo en base (best-effort) -> le site le sert sans re-fetch.
+        md.store_token_image(address, image_url)
         group_position = md.get_group_position_by_wins(group_id)
 
         info_message += (
@@ -257,7 +261,6 @@ async def handle_contract_address(message: Message, state: FSMContext):
             f"⚡️ *Current Score (X's):* {group_current_stat}x\n"
         )
 
-        image_url = dex.get_token_image_url(address)
         if image_url:
             try:
                 await bot.send_photo(message.chat.id, photo=image_url,

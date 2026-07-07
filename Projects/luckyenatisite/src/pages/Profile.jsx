@@ -109,14 +109,17 @@ function GroupCallsCard({ rows }) {
         <span style={{ fontSize: 13, color: '#7a8085' }}>User</span>
       </div>
       {rows.length === 0 && <div style={{ padding: '20px 0', color: '#7a8085', fontSize: 14 }}>No calls yet.</div>}
-      {rows.map((r, i) => (
-        <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #191d1f' }}>
-          <TokenCell symbol={r.symbol} image={r.image} />
-          <div><div style={{ fontSize: 14, color: '#e6e8ea' }}>{fmtMc(r.mcap_then)}</div><div style={{ fontSize: 12, color: '#7a8085', marginTop: 2 }}>{r.ago}</div></div>
-          <div style={{ fontSize: 14, color: '#e6e8ea' }}>{fmtMc(r.mcap_now)}</div>
-          <div style={{ fontSize: 13, color: '#787e83' }}>{r.caller_username ? '@' + r.caller_username : '—'}</div>
-        </div>
-      ))}
+      {/* ~9 lignes visibles (44px/ligne) puis scroll vertical. */}
+      <div style={{ maxHeight: 396, overflowY: 'auto' }}>
+        {rows.map((r, i) => (
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #191d1f' }}>
+            <TokenCell symbol={r.symbol} image={r.image} />
+            <div><div style={{ fontSize: 14, color: '#e6e8ea' }}>{fmtMc(r.mcap_then)}</div><div style={{ fontSize: 12, color: '#7a8085', marginTop: 2 }}>{r.ago}</div></div>
+            <div style={{ fontSize: 14, color: '#e6e8ea' }}>{fmtMc(r.mcap_now)}</div>
+            <div style={{ fontSize: 13, color: '#787e83' }}>{r.caller_username ? '@' + r.caller_username : '—'}</div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

@@ -434,10 +434,42 @@ def user_photo(tg_id):
         abort(404)
 
 
+def _resolve_token_image_url(addr):
+    """URL du logo d'un token : DexScreener (paire la plus liquide) puis fallback
+    pump.fun. Renvoie None si aucune image."""
+    src_url = None
+    try:
+        resp = requests.get(f'https://api.dexscreener.com/latest/dex/tokens/{addr}', timeout=12)
+        if resp.status_code == 200:
+            addr_l = addr.lower()
+            best_liq = -1
+            for p in (resp.json() or {}).get('pairs') or []:
+                if ((p.get('baseToken') or {}).get('address') or '').lower() != addr_l:
+                    continue
+                img_url = (p.get('info') or {}).get('imageUrl')
+                liq = _to_float((p.get('liquidity') or {}).get('usd')) or 0
+                if img_url and liq > best_liq:
+                    src_url, best_liq = img_url, liq
+    except requests.RequestException as e:
+        logger.warning(f"token photo DexScreener resolve failed for {addr}: {e}")
+    if src_url:
+        return src_url
+    # Fallback pump.fun (couvre les tokens pump.fun absents de DexScreener).
+    try:
+        r = requests.get(f'https://frontend-api-v3.pump.fun/coins/{addr}',
+                         headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
+        if r.status_code == 200:
+            return (r.json() or {}).get('image_uri')
+    except requests.RequestException as e:
+        logger.warning(f"token photo pump.fun resolve failed for {addr}: {e}")
+    return None
+
+
 @app.route('/api/token-photo/<path:address>', methods=['GET'])
 def token_photo(address):
     """Logo d'un token. Servi depuis la base (collection 'media') si deja stocke ;
-    sinon resolu via DexScreener (info.imageUrl) PUIS stocke. ?refresh=1 force.
+    sinon resolu via coin_image (base) / DexScreener / pump.fun PUIS stocke. Un echec
+    est memorise (marqueur 'missing') pour ne pas re-appeler les API. ?refresh=1 force.
     404 (placeholder cote front) si aucun logo."""
     addr = (address or '').strip()
     if not addr:
@@ -446,41 +478,39 @@ def token_photo(address):
     refresh = request.args.get('refresh') in ('1', 'true', 'yes')
 
     doc = _media_get(key)
-    # 1) Deja en base -> on sert.
-    if not refresh and doc and doc.get('data'):
-        return Response(bytes(doc['data']), mimetype=doc.get('content_type', 'image/jpeg'))
+    if not refresh and doc:
+        # Deja en base -> on sert.
+        if doc.get('data'):
+            return Response(bytes(doc['data']), mimetype=doc.get('content_type', 'image/jpeg'))
+        # Echec deja memorise -> 404 rapide, sans re-appeler les API.
+        if doc.get('missing'):
+            abort(404)
 
-    # 2) URL source : indice deja memorise, sinon DexScreener single-token.
+    # URL source : indice memorise (media.src_url) -> coin_image (base) -> resolution.
     src_url = (doc or {}).get('src_url')
     if not src_url:
-        try:
-            resp = requests.get(f'https://api.dexscreener.com/latest/dex/tokens/{addr}', timeout=15)
-            if resp.status_code == 200:
-                addr_l = addr.lower()
-                best_liq = -1
-                for p in (resp.json() or {}).get('pairs') or []:
-                    if ((p.get('baseToken') or {}).get('address') or '').lower() != addr_l:
-                        continue
-                    img_url = (p.get('info') or {}).get('imageUrl')
-                    liq = _to_float((p.get('liquidity') or {}).get('usd')) or 0
-                    if img_url and liq > best_liq:
-                        src_url, best_liq = img_url, liq
-        except requests.RequestException as e:
-            logger.warning(f"token photo resolve failed for {addr}: {e}")
+        coin = users_collection.find_one({'contract_address': addr}, {'coin_image': 1})
+        src_url = (coin or {}).get('coin_image')
     if not src_url:
-        abort(404)
+        src_url = _resolve_token_image_url(addr)
 
-    # 3) Download + stockage.
-    try:
-        img = requests.get(src_url, timeout=15)
-        if img.status_code != 200 or not img.content:
-            abort(404)
-        _media_put(key, img.content, img.headers.get('Content-Type', 'image/jpeg'), src_url=src_url)
-        stored = _media_get(key)
-        return Response(bytes(stored['data']), mimetype=stored.get('content_type', 'image/jpeg'))
-    except requests.RequestException as e:
-        logger.warning(f"token photo download failed for {addr}: {e}")
-        abort(404)
+    if src_url:
+        try:
+            img = requests.get(src_url, timeout=15)
+            if img.status_code == 200 and img.content:
+                _media_put(key, img.content, img.headers.get('Content-Type', 'image/jpeg'), src_url=src_url)
+                stored = _media_get(key)
+                return Response(bytes(stored['data']), mimetype=stored.get('content_type', 'image/jpeg'))
+        except requests.RequestException as e:
+            logger.warning(f"token photo download failed for {addr}: {e}")
+
+    # Echec : marqueur negatif -> evite de re-appeler les API aux prochains chargements.
+    media_collection.update_one(
+        {'_id': key},
+        {'$set': {'missing': True, 'updated_at': time.time()}},
+        upsert=True,
+    )
+    abort(404)
 
 
 def get_top_groups_by_wins():
@@ -1160,34 +1190,6 @@ def _groups_created_count(tg_id, force=False):
     return count
 
 
-def _dex_token_info_batch(addresses):
-    """Infos live par adresse via DexScreener (batch, <=30) : market cap + image.
-    Retourne {address_lower: {'mcap': float|None, 'image': str|None}}.
-    Echoue proprement (dict vide) si reseau KO."""
-    best = {}  # addr -> (liq, mcap, image)
-    addrs = [a for a in dict.fromkeys(a for a in addresses if a)][:30]
-    if not addrs:
-        return {}
-    try:
-        url = f'https://api.dexscreener.com/latest/dex/tokens/{",".join(addrs)}'
-        resp = requests.get(url, timeout=15)
-        if resp.status_code == 200:
-            for p in (resp.json() or {}).get('pairs') or []:
-                addr = ((p.get('baseToken') or {}).get('address') or '').lower()
-                if not addr:
-                    continue
-                mcap = _to_float(p.get('marketCap')) or _to_float(p.get('fdv'))
-                image = (p.get('info') or {}).get('imageUrl')
-                liq = _to_float((p.get('liquidity') or {}).get('usd')) or 0
-                # On garde la paire la plus liquide par token.
-                prev = best.get(addr)
-                if prev is None or liq > prev[0]:
-                    best[addr] = (liq, mcap, image)
-    except requests.RequestException as e:
-        logger.warning(f"DexScreener batch token info failed: {e}")
-    return {a: {'mcap': v[1], 'image': v[2]} for a, v in best.items()}
-
-
 def _persist_user_stats(user, extra):
     """Ecrit un snapshot des stats dans app_users (persistance)."""
     snapshot = dict(extra)
@@ -1247,35 +1249,23 @@ def get_me_profile():
 
     your_docs = list(users_collection.find({'caller_id': tg_id}).sort('creation_time', -1).limit(15))
     group_docs = list(users_collection.find(
-        {'group_id': {'$in': joined_ids}}).sort('creation_time', -1).limit(15)) if joined_ids else []
-
-    # Infos live (batch) : market cap (pour le PnL) + image du token.
-    addrs = [d.get('contract_address') for d in (your_docs + group_docs)]
-    info_by_addr = _dex_token_info_batch(addrs)
+        {'group_id': {'$in': joined_ids}}).sort('creation_time', -1).limit(50)) if joined_ids else []
 
     def _row(d):
         addr = d.get('contract_address') or ''
-        info = info_by_addr.get(addr.lower()) or {}
         mcap_then = _to_float(d.get('market_cap'))
-        mcap_now = info.get('mcap')
-        if mcap_now is not None and mcap_then:
-            pnl_pct = round((mcap_now / mcap_then - 1) * 100, 2)
-        else:
-            cs = _to_float(d.get('current_stat'))
-            pnl_pct = round((cs - 1) * 100, 2) if cs else None
-        # Logo connu (soit deja en base, soit renvoye par DexScreener) -> on pointe
-        # vers notre proxy (qui sert depuis la base). Sinon pas d'image (placeholder),
-        # ce qui evite un appel DexScreener inutile pour un token sans logo.
-        stored_media = _media_get(f'token:{addr.lower()}') if addr else None
-        has_logo = bool(info.get('image')) or bool(stored_media and stored_media.get('data'))
-        if addr and info.get('image'):
-            # Memorise l'URL (indice) -> /api/token-photo telechargera sans re-appeler DexScreener.
-            _media_set_src(f'token:{addr.lower()}', info['image'])
+        # Mcap courant : lu depuis la base (stocke par le bot), pas d'appel live.
+        mcap_now = _to_float(d.get('current_market_cap'))
+        # PnL : laisse en mockup pour l'instant (derive du multiple si dispo).
+        cs = _to_float(d.get('current_stat'))
+        pnl_pct = round((cs - 1) * 100, 2) if cs else None
+        # Image : servie par /api/token-photo (depuis la base ; resolution paresseuse
+        # avec fallback pump.fun + cache negatif cote endpoint).
         return {
             'symbol': d.get('coin_name') or 'Unknown',
             'name': d.get('coin_name') or 'Unknown',
             'contract': addr,
-            'image': (f'/api/token-photo/{addr}' if (addr and has_logo) else None),
+            'image': (f'/api/token-photo/{addr}' if addr else None),
             'mcap_then': mcap_then,
             'mcap_now': mcap_now,
             'pnl_pct': pnl_pct,

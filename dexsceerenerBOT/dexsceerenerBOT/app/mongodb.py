@@ -1,4 +1,7 @@
 from pymongo import MongoClient
+from bson.binary import Binary
+import requests
+import time
 import app.dexscreenerAPI as dex
 
 from datetime import datetime, timedelta
@@ -20,9 +23,38 @@ client = MongoClient(MONGO_DB_URL)
 db = client['enati']
 users_collection = db['coins']
 monitoring_collection = db['monitoring']  # compteur des tokens actuellement monitores
+media_collection = db['media']            # images persistantes (partage avec le serveur web)
+
+
+def store_token_image(address, image_url):
+    """Telecharge le logo d'un token et le stocke en base (collection 'media',
+    cle 'token:<addr_lower>') pour que le site le serve sans re-fetch. Best-effort :
+    toute erreur est ignoree (ne doit jamais casser le traitement d'un call)."""
+    if not address or not image_url:
+        return
+    key = f'token:{address.lower()}'
+    try:
+        # Deja stocke -> on ne re-telecharge pas.
+        existing = media_collection.find_one({'_id': key}, {'data': 1})
+        if existing and existing.get('data'):
+            return
+        img = requests.get(image_url, timeout=15)
+        if img.status_code != 200 or not img.content:
+            return
+        ct = img.headers.get('Content-Type', 'image/jpeg')
+        if not ct.startswith('image/'):
+            ct = 'image/jpeg'
+        media_collection.replace_one(
+            {'_id': key},
+            {'_id': key, 'data': Binary(img.content), 'content_type': ct,
+             'src_url': image_url, 'updated_at': time.time()},
+            upsert=True,
+        )
+    except requests.RequestException:
+        pass
 
 def add_or_update_coin(contract_address, coin_name, market_cap, wins, defeat, currect_stat, creation_time, group_name, group_id, group_photo,
-                       caller_id=None, caller_username=None, caller_name=None):
+                       caller_id=None, caller_username=None, caller_name=None, coin_image=None):
     # Define the query to check if a document with the given contract_address and group_id exists
     query = {'contract_address': contract_address, 'group_id': group_id}
 
@@ -40,6 +72,8 @@ def add_or_update_coin(contract_address, coin_name, market_cap, wins, defeat, cu
             'contract_address': contract_address,
             'coin_name': coin_name,
             'market_cap': market_cap,
+            'current_market_cap': market_cap,  # mcap courant (mis a jour a chaque tick)
+            'coin_image': coin_image,          # URL du logo (resolu avec fallback pump.fun)
             'wins': wins,
             'defeat': defeat,
             'current_stat': currect_stat,
@@ -93,6 +127,10 @@ async def process_active_tokens():
 
         update = {}
         milestone = None
+
+        if current is not None:
+            # Mcap courant frais en base -> le site l'affiche sans appel DexScreener.
+            update['current_market_cap'] = current
 
         if current is not None and initial:
             ratio = current / initial
