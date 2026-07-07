@@ -269,7 +269,7 @@ export default function App() {
   useEffect(() => {
     const applyContentZoom = () => {
       const w = window.innerWidth;
-      const z = w >= 2000 ? 0.75 : (w >= 1024 ? 0.67 : 1);
+      const z = w >= 2000 ? 0.75 : (w >= 1024 ? 0.8 : 1);
       if (contentRef.current) contentRef.current.style.zoom = String(z);
     };
     applyContentZoom();
