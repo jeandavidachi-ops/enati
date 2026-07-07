@@ -835,9 +835,11 @@ _MEMBER_STATUSES = {'creator', 'administrator', 'member', 'restricted'}
 _chat_member_cache = {}   # (group_id, tg_id) -> (status, ts)
 _member_count_cache = {}  # group_id -> (count, ts)
 _join_link_cache = {}     # group_id -> (link_or_None, ts)
+_groups_created_cache = {} # tg_id -> (count, ts)
 CHAT_MEMBER_TTL = 300     # 5 min
 MEMBER_COUNT_TTL = 3600   # 1h
 JOIN_LINK_TTL = 3600      # 1h
+GROUPS_CREATED_TTL = 3600 # 1h
 
 
 def _tg_get_chat_member(group_id, tg_id, force=False):
@@ -964,6 +966,194 @@ def _hydrate_my_groups(user, joined_ids, members_by_gid):
     return {'success': True, 'joined': joined, 'available': available}
 
 
+# =====================================================================
+#  Statistiques utilisateur (carte de rang + page profil)
+#  scans/wins/defeats = agregation des calls postes par le user
+#  (collection 'coins', caller_id == telegram.id).
+# =====================================================================
+
+def _user_call_stats(tg_id):
+    """Agrege les calls postes par le user (caller_id). Une seule requete Mongo.
+    Retourne {scans, wins, defeats, win_rate, total_stat}."""
+    pipeline = [
+        {'$match': {'caller_id': tg_id}},
+        {'$group': {
+            '_id': None,
+            'scans': {'$sum': 1},
+            'wins': {'$sum': '$wins'},
+            'defeats': {'$sum': '$defeat'},
+            'total_stat': {'$sum': '$current_stat'},
+        }},
+    ]
+    agg = list(users_collection.aggregate(pipeline))
+    if not agg:
+        return {'scans': 0, 'wins': 0, 'defeats': 0, 'win_rate': 0, 'total_stat': 0}
+    d = agg[0]
+    wins = d.get('wins', 0) or 0
+    defeats = d.get('defeats', 0) or 0
+    win_rate = round(wins / (wins + defeats) * 100) if (wins + defeats) > 0 else 0
+    return {
+        'scans': d.get('scans', 0) or 0,
+        'wins': wins,
+        'defeats': defeats,
+        'win_rate': win_rate,
+        'total_stat': d.get('total_stat', 0) or 0,
+    }
+
+
+def _groups_created_count(tg_id, force=False):
+    """Nombre de groupes (ou le bot est present) dont le user est le CREATEUR.
+    Scanne les group_id connus via getChatMember (deja cache 5 min). Cache le
+    total par tg_id (TTL 1h)."""
+    cached = _groups_created_cache.get(tg_id)
+    if not force and cached and (time.time() - cached[1] < GROUPS_CREATED_TTL):
+        return cached[0]
+    count = 0
+    for g in get_all_groups_stats().get('data', []):
+        gid = g.get('group_id')
+        if gid is None:
+            continue
+        if _tg_get_chat_member(gid, tg_id, force=force) == 'creator':
+            count += 1
+    _groups_created_cache[tg_id] = (count, time.time())
+    return count
+
+
+def _dex_mcap_now_batch(addresses):
+    """Market cap actuel par adresse via DexScreener (batch, <=30). Retourne
+    {address_lower: mcap_or_None}. Echoue proprement (dict vide) si reseau KO."""
+    out = {}
+    addrs = [a for a in dict.fromkeys(a for a in addresses if a)][:30]
+    if not addrs:
+        return out
+    try:
+        url = f'https://api.dexscreener.com/latest/dex/tokens/{",".join(addrs)}'
+        resp = requests.get(url, timeout=15)
+        if resp.status_code == 200:
+            for p in (resp.json() or {}).get('pairs') or []:
+                addr = ((p.get('baseToken') or {}).get('address') or '').lower()
+                if not addr:
+                    continue
+                mcap = _to_float(p.get('marketCap')) or _to_float(p.get('fdv'))
+                liq = _to_float((p.get('liquidity') or {}).get('usd')) or 0
+                # On garde la paire la plus liquide par token.
+                prev = out.get(addr)
+                if mcap is not None and (prev is None or liq > prev[1]):
+                    out[addr] = (mcap, liq)
+    except requests.RequestException as e:
+        logger.warning(f"DexScreener batch mcap failed: {e}")
+    return {a: v[0] for a, v in out.items()}
+
+
+def _persist_user_stats(user, extra):
+    """Ecrit un snapshot des stats dans app_users (persistance)."""
+    snapshot = dict(extra)
+    snapshot['updated_at'] = time.time()
+    try:
+        app_users.update_one({'id': user['id']}, {'$set': {'stats': snapshot}})
+    except Exception as e:
+        logger.warning(f"persist user stats failed for {user.get('id')}: {e}")
+
+
+@app.route('/api/me/stats', methods=['GET'])
+def get_me_stats():
+    """Stats legeres pour la carte de rang (header) + cartes du haut du profil."""
+    user, tg_id = _my_groups_auth()
+    if tg_id is None:
+        return user  # (reponse, code) d'erreur
+    stats = _user_call_stats(tg_id)
+    groups_joined = user_joined_groups.count_documents({'user_id': user['id']})
+    groups_created = _groups_created_count(tg_id)
+    out = {
+        'scans': stats['scans'], 'wins': stats['wins'], 'defeats': stats['defeats'],
+        'win_rate': stats['win_rate'],
+        'groups_joined': groups_joined, 'groups_created': groups_created,
+    }
+    _persist_user_stats(user, out)
+    return jsonify({'success': True, **out})
+
+
+def _ago(ts):
+    """'2d ago' / '3h ago' / '5m ago' depuis un timestamp epoch (ou None)."""
+    if not ts:
+        return ''
+    try:
+        secs = max(0, time.time() - float(ts))
+    except (TypeError, ValueError):
+        return ''
+    if secs < 3600:
+        return f"{int(secs // 60)}m ago"
+    if secs < 86400:
+        return f"{int(secs // 3600)}h ago"
+    return f"{int(secs // 86400)}d ago"
+
+
+@app.route('/api/me/profile', methods=['GET'])
+def get_me_profile():
+    """Donnees completes de la page profil : header, stats, anneau win rate,
+    tables 'Your Calls' (calls du user) et 'Groups Calls' (calls de ses groupes)."""
+    user, tg_id = _my_groups_auth()
+    if tg_id is None:
+        return user
+
+    stats = _user_call_stats(tg_id)
+    groups_joined = user_joined_groups.count_documents({'user_id': user['id']})
+    groups_created = _groups_created_count(tg_id)
+    joined_ids = [d['group_id'] for d in
+                  user_joined_groups.find({'user_id': user['id']}, {'group_id': 1})]
+
+    your_docs = list(users_collection.find({'caller_id': tg_id}).sort('creation_time', -1).limit(15))
+    group_docs = list(users_collection.find(
+        {'group_id': {'$in': joined_ids}}).sort('creation_time', -1).limit(15)) if joined_ids else []
+
+    # Market cap live (batch) pour le PnL des calls affiches.
+    addrs = [d.get('contract_address') for d in (your_docs + group_docs)]
+    mcap_now_by_addr = _dex_mcap_now_batch(addrs)
+
+    def _row(d):
+        addr = d.get('contract_address') or ''
+        mcap_then = _to_float(d.get('market_cap'))
+        mcap_now = mcap_now_by_addr.get(addr.lower())
+        if mcap_now is not None and mcap_then:
+            pnl_pct = round((mcap_now / mcap_then - 1) * 100, 2)
+        else:
+            cs = _to_float(d.get('current_stat'))
+            pnl_pct = round((cs - 1) * 100, 2) if cs else None
+        return {
+            'symbol': d.get('coin_name') or 'Unknown',
+            'name': d.get('coin_name') or 'Unknown',
+            'contract': addr,
+            'mcap_then': mcap_then,
+            'mcap_now': mcap_now,
+            'pnl_pct': pnl_pct,
+            'caller_username': d.get('caller_username'),
+            'ago': _ago(d.get('creation_time')),
+        }
+
+    your_calls = [_row(d) for d in your_docs]
+    group_calls = [_row(d) for d in group_docs]
+
+    out_stats = {
+        'scans': stats['scans'], 'wins': stats['wins'], 'defeats': stats['defeats'],
+        'win_rate': stats['win_rate'],
+        'groups_joined': groups_joined, 'groups_created': groups_created,
+    }
+    _persist_user_stats(user, out_stats)
+    tg = user.get('telegram') or {}
+    return jsonify({
+        'success': True,
+        'telegram': {
+            'id': tg.get('id'), 'username': tg.get('username'),
+            'firstName': tg.get('firstName'), 'photoUrl': tg.get('photoUrl'),
+        },
+        'name': user.get('name'),
+        'joined_at': user.get('created_at'),
+        'stats': out_stats,
+        'your_calls': your_calls,
+        'group_calls': group_calls,
+    })
+
+
 @app.route('/api/my-groups', methods=['GET'])
 def get_my_groups():
     """Chemin RAPIDE (aucun appel Telegram) : lit les groupes rejoints depuis la
@@ -992,14 +1182,20 @@ def refresh_my_groups():
     stats = get_all_groups_stats().get('data', [])
     member_ids = set()
     members_by_gid = {}
+    created_count = 0
     for g in stats:
         gid = g.get('group_id')
         if gid is None:
             continue
         status = _tg_get_chat_member(gid, tg_id, force=force)
+        if status == 'creator':
+            created_count += 1
         if status in _MEMBER_STATUSES:
             member_ids.add(gid)
             members_by_gid[gid] = _tg_member_count(gid)
+    # Le scan complet ci-dessus donne aussi le compte "groups created" -> on le
+    # met en cache (evite un 2e scan cote /api/me/stats) et on le persiste.
+    _groups_created_cache[tg_id] = (created_count, time.time())
 
     # Reconciliation de la base : upsert des membres, suppression des groupes quittes.
     for gid in member_ids:
@@ -1013,6 +1209,14 @@ def refresh_my_groups():
     # Un groupe devenu membre n'a plus de demande en attente -> on nettoie.
     if member_ids:
         group_join_requests.delete_many({'user_id': user['id'], 'group_id': {'$in': list(member_ids)}})
+
+    # Persiste un snapshot des stats a jour (groups_joined/created + calls).
+    call_stats = _user_call_stats(tg_id)
+    _persist_user_stats(user, {
+        'scans': call_stats['scans'], 'wins': call_stats['wins'],
+        'defeats': call_stats['defeats'], 'win_rate': call_stats['win_rate'],
+        'groups_joined': len(member_ids), 'groups_created': created_count,
+    })
 
     return jsonify(_hydrate_my_groups(user, member_ids, members_by_gid))
 

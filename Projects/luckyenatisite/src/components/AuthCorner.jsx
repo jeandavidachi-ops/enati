@@ -3,7 +3,7 @@
 import React, { useState as vsUseState, useEffect as vsUseEffect, useRef as vsUseRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate as vsUseNavigate } from 'react-router-dom'
-import { apiFetch, apiGet, apiSet } from '../lib/api.js'
+import { apiFetch, apiGet, apiSet, useApi } from '../lib/api.js'
 import useTelegramConnect from './shared/useTelegramConnect.js'
 
 ;(function injectAuthStyles() {
@@ -258,19 +258,22 @@ function VsTelegramButton({ onConnected }) {
   )
 }
 
-function VsRankCardButton({ user }) {
+function VsRankCardButton({ user, stats }) {
   const name = (user.telegram && user.telegram.username && "@" + user.telegram.username) || user.name || "@you"
+  const scans = stats?.scans ?? 0
+  const wins = stats?.wins ?? 0
+  const defeats = stats?.defeats ?? 0
   return (
     <button className="vs-rc-btn" type="button" aria-label={"Open " + name + " profile"}>
       <div className="vs-rc-avatar" aria-hidden="true"><div className="h"></div><div className="b"></div></div>
       <div style={{ textAlign: "left", minWidth: 0 }}>
         <div className="vs-rc-name">{name}</div>
         <div className="vs-rc-stats">
-          <div className="vs-rc-stat"><strong className="vs-rc-blue">48</strong><p>scans</p></div>
+          <div className="vs-rc-stat"><strong className="vs-rc-blue">{scans}</strong><p>scans</p></div>
           <div className="vs-rc-line"></div>
-          <div className="vs-rc-stat"><strong className="vs-rc-green">31</strong><p>wins</p></div>
+          <div className="vs-rc-stat"><strong className="vs-rc-green">{wins}</strong><p>wins</p></div>
           <div className="vs-rc-line"></div>
-          <div className="vs-rc-stat"><strong className="vs-rc-red">17</strong><p>defeats</p></div>
+          <div className="vs-rc-stat"><strong className="vs-rc-red">{defeats}</strong><p>defeats</p></div>
         </div>
       </div>
       <div className="vs-rc-arrow" aria-hidden="true">→</div>
@@ -297,7 +300,7 @@ function VsAmRow({ danger, onClick, children, icon }) {
 }
 
 // Bouton rank card + dropdown menu compte (ouvre au survol ET au clic).
-function VsAccountMenu({ user, onLogout }) {
+function VsAccountMenu({ user, onLogout, stats }) {
   const [open, setOpen] = vsUseState(false)
   const navigate = vsUseNavigate()
   const go = (path) => { setOpen(false); navigate(path) }
@@ -316,7 +319,7 @@ function VsAccountMenu({ user, onLogout }) {
   return (
     <div className="vs-am-wrap" ref={wrapRef} onMouseEnter={openNow} onMouseLeave={closeSoon}>
       <div onClick={() => setOpen((o) => !o)}>
-        <VsRankCardButton user={user} />
+        <VsRankCardButton user={user} stats={stats} />
       </div>
       {open && (
         <div className="vs-am-menu" role="menu">
@@ -334,6 +337,8 @@ function VsAccountMenu({ user, onLogout }) {
 export default function AuthCorner() {
   const [user, setUser] = vsUseState(() => apiGet("/api/auth/me")?.user ?? null)
   const [modal, setModal] = vsUseState(null) // "login" | "signup" | null
+  // Stats de la carte de rang (scans/wins/defeats) — chargees seulement quand TG lie.
+  const statsData = useApi(user && user.telegram ? "/api/me/stats" : null)
   vsUseEffect(() => {
     apiFetch("/api/auth/me").then((d) => setUser(d.user)).catch(() => {})
   }, [])
@@ -360,7 +365,7 @@ export default function AuthCorner() {
       ) : !user.telegram ? (
         <VsTelegramButton onConnected={applyUser} />
       ) : (
-        <VsAccountMenu user={user} onLogout={logout} />
+        <VsAccountMenu user={user} onLogout={logout} stats={statsData} />
       )}
       {modalEl && createPortal(modalEl, document.body)}
     </div>
