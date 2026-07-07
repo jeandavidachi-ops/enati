@@ -111,14 +111,16 @@ function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, teleg
           </dl>
           <div className="mt-3 flex items-center justify-between gap-2">
             <nav className="flex items-center gap-3 text-[#c9ccd2]">
+              {/* Bouton X retire pour l'instant sur les cards groupe. Pour les tickers,
+                  l'icone n'apparait que si un lien twitter existe (plus de fallback grise). */}
               {twitter
                 ? <span role="link" title="X (Twitter)" onClick={openSocial(twitter)} className="hover:text-white cursor-pointer"><XIcon className="w-[clamp(15px,1vw,18px)] h-[clamp(15px,1vw,18px)]" /></span>
-                : <XIcon className="w-[clamp(15px,1vw,18px)] h-[clamp(15px,1vw,18px)] text-[#c9ccd2]/40" />}
+                : null}
               {groupId
                 ? <span role="link" title="Telegram" onClick={requestJoin} className="hover:text-white cursor-pointer"><TelegramIcon className="w-[clamp(16px,1.05vw,19px)] h-[clamp(16px,1.05vw,19px)]" /></span>
                 : telegram
                 ? <span role="link" title="Telegram" onClick={openSocial(telegram)} className="hover:text-white cursor-pointer"><TelegramIcon className="w-[clamp(16px,1.05vw,19px)] h-[clamp(16px,1.05vw,19px)]" /></span>
-                : <TelegramIcon className="w-[clamp(16px,1.05vw,19px)] h-[clamp(16px,1.05vw,19px)] text-[#c9ccd2]/40" />}
+                : null}
             </nav>
             {join ? (
             <button onClick={requestJoin} disabled={joinBusy}
