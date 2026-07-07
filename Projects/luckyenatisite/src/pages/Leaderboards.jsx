@@ -263,6 +263,20 @@ export default function App() {
   }, []);
   const top3 = rows.slice(0, 3);
 
+  // Zoom additionnel sur le contenu (podium + table) uniquement, pas le header.
+  // Se cumule avec le zoom global de useGlobalZoom (les zoom CSS se multiplient).
+  const contentRef = useRef(null);
+  useEffect(() => {
+    const applyContentZoom = () => {
+      const w = window.innerWidth;
+      const z = w >= 2000 ? 0.75 : (w >= 1024 ? 0.67 : 1);
+      if (contentRef.current) contentRef.current.style.zoom = String(z);
+    };
+    applyContentZoom();
+    window.addEventListener("resize", applyContentZoom);
+    return () => window.removeEventListener("resize", applyContentZoom);
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
       <div className="flex flex-col flex-1 bg-[#0b0b0c]">
@@ -287,7 +301,7 @@ export default function App() {
         </header>
         </div>
 
-        <div className="flex-1 flex flex-col">
+        <div ref={contentRef} className="flex-1 flex flex-col">
         <main className="pl-6 pr-4 sm:pr-6 lg:pr-10 xl:pr-16 2xl:pr-24 py-8">
           <div className="max-w-[clamp(960px,72vw,1400px)] mx-auto w-full">
           <div className="flex items-center justify-between gap-4 flex-wrap">
