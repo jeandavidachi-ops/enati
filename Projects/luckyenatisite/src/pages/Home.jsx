@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
-import { useApi, apiFetch } from '../lib/api.js'
+import { useApi, apiFetch, apiInvalidate } from '../lib/api.js'
 
 // ---- Helpers ----
 const GRADS = [
@@ -154,10 +154,26 @@ function prefetchDetail(href) {
   if (href.startsWith("/group/")) apiFetch("/api/group/" + href.slice(7));
   else if (href.startsWith("/ticker/")) apiFetch("/api/token/" + href.slice(8));
 }
-function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, telegram }) {
+function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, telegram, groupId }) {
   const Tag = href ? Link : "article";
+  const [joinBusy, setJoinBusy] = useState(false);
   // Ouvre le lien social sans declencher la navigation de la card (evite l'<a> imbrique).
   const openSocial = (url) => (ev) => { ev.preventDefault(); ev.stopPropagation(); window.open(url, "_blank", "noopener"); };
+  // Demande d'adhesion a un groupe (meme mecanique que YourGroups/AvailableRow) :
+  // enregistre la demande puis ouvre le lien de join. Utilise par le bouton
+  // "Request to Join" et par l'icone Telegram des cards de groupe.
+  const requestJoin = async (ev) => {
+    ev.preventDefault(); ev.stopPropagation();
+    if (!groupId || joinBusy) return;
+    setJoinBusy(true);
+    try {
+      const r = await fetch(`/api/group/${groupId}/request-join`, { method: 'POST' });
+      const data = await r.json();
+      apiInvalidate('/api/my-groups');
+      if (data.join_link) window.open(data.join_link, '_blank', 'noopener');
+    } catch { /* ignore */ }
+    setJoinBusy(false);
+  };
   return (
     <Tag {...(href ? { to: href, onMouseEnter: () => prefetchDetail(href) } : {})}
       className={"relative w-full block overflow-hidden rounded-[20px]" + (href ? " cursor-pointer transition-colors hover:border-white/30" : "")}
@@ -191,12 +207,14 @@ function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, teleg
               {twitter
                 ? <span role="link" title="X (Twitter)" onClick={openSocial(twitter)} className="hover:text-white cursor-pointer"><XIcon className="w-[clamp(15px,1vw,18px)] h-[clamp(15px,1vw,18px)]" /></span>
                 : <XIcon className="w-[clamp(15px,1vw,18px)] h-[clamp(15px,1vw,18px)] text-[#c9ccd2]/40" />}
-              {telegram
+              {groupId
+                ? <span role="link" title="Telegram" onClick={requestJoin} className="hover:text-white cursor-pointer"><TelegramIcon className="w-[clamp(16px,1.05vw,19px)] h-[clamp(16px,1.05vw,19px)]" /></span>
+                : telegram
                 ? <span role="link" title="Telegram" onClick={openSocial(telegram)} className="hover:text-white cursor-pointer"><TelegramIcon className="w-[clamp(16px,1.05vw,19px)] h-[clamp(16px,1.05vw,19px)]" /></span>
                 : <TelegramIcon className="w-[clamp(16px,1.05vw,19px)] h-[clamp(16px,1.05vw,19px)] text-[#c9ccd2]/40" />}
             </nav>
             {join ? (
-            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            <button onClick={requestJoin} disabled={joinBusy}
               style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
               className="rtj-btn flex items-center gap-1.5 rounded-[8px] bg-[#f5f5f5] text-black font-semibold px-3.5 py-1.5 text-[clamp(11px,0.8vw,13px)] whitespace-nowrap">
               Request to Join
@@ -508,7 +526,7 @@ export default function Versus() {
             </div>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-5">
               {groups.map((d, i) => (
-                <BlocksCard key={i} image={d.img} name={d.name} g={d.g} e={d.e} time={groupTime} join
+                <BlocksCard key={i} image={d.img} name={d.name} g={d.g} e={d.e} time={groupTime} join groupId={d.id}
                   href={d.id ? ("/group/" + d.id) : null}
                   stats={[
                     { label: "PnL", value: d.win + "%", positive: true },

@@ -201,6 +201,8 @@ export default function YourGroups() {
   const data = fresh || cached
   const joined = data?.joined || []
   const available = data?.available || []
+  // "Requested" ne montre que les groupes que l'utilisateur a effectivement demande a rejoindre.
+  const requested = available.filter((g) => g.requested)
   const loading = cached === undefined && !fresh
   const notLinked = data && data.success === false
 
@@ -243,7 +245,7 @@ export default function YourGroups() {
                 </div>
                 <div style={tabStyle(tab === 'requested')} onClick={() => setTab('requested')}>
                   <span style={{ color: tab === 'requested' ? '#ffffff' : '#c4ccce', fontSize: 15, fontWeight: 600 }}>Requested</span>
-                  <span style={badge(tab === 'requested')}>{available.length}</span>
+                  <span style={badge(tab === 'requested')}>{requested.length}</span>
                 </div>
               </div>
 
@@ -252,7 +254,7 @@ export default function YourGroups() {
               ) : tab === 'joined' ? (
                 <GroupsTable rows={joined} kind="joined" />
               ) : (
-                <GroupsTable rows={available} kind="available" />
+                <GroupsTable rows={requested} kind="available" />
               )}
 
               <RequestsPlaceholder />
