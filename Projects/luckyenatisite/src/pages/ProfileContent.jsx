@@ -158,7 +158,7 @@ function YourCallsCard({ rows, title = 'Your Calls' }) {
 // `data` : objet profil resolu (schema /api/me/profile ou /api/user/<id>/profile).
 // `me`   : snapshot /api/auth/me (optionnel, pre-affichage instantane pour son propre profil).
 // `callsTitle` : titre de la table du bas ("Your Calls" par defaut).
-export default function ProfileContent({ data, me, callsTitle = 'Your Calls' }) {
+export default function ProfileContent({ data, me, callsTitle = 'Your Calls', showGroupsCreated = true }) {
   const tg = data?.telegram || me?.telegram || {}
   const stats = data?.stats || me?.stats || {}
   const name = tg.firstName || (tg.username ? '@' + tg.username : (data?.name || me?.name || 'You'))
@@ -186,8 +186,10 @@ export default function ProfileContent({ data, me, callsTitle = 'Your Calls' }) 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <StatCard label="Groups Joined" value={stats.groups_joined ?? 0}
               icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="#7a8085" strokeWidth="1.6" /><path d="M3.5 19c0-3 2.6-5 5.5-5s5.5 2 5.5 5" stroke="#7a8085" strokeWidth="1.6" strokeLinecap="round" /><path d="M16 6.2a3 3 0 010 5.6M18 19c0-2.4-1.3-4.2-3-4.8" stroke="#7a8085" strokeWidth="1.6" strokeLinecap="round" /></svg>} />
+            {showGroupsCreated && (
             <StatCard label="Groups Created" value={stats.groups_created ?? 0}
               icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3.5l2.6 5.27 5.82.85-4.21 4.1.99 5.8L12 16.8l-5.2 2.72.99-5.8-4.21-4.1 5.82-.85L12 3.5z" stroke="#7a8085" strokeWidth="1.6" strokeLinejoin="round" /></svg>} />
+            )}
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useMemo } from 'react'
+﻿import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
@@ -279,7 +279,7 @@ function LbMedal({ rank }) {
   if (rank === "3") return <div className="medal bronze"><span>3</span></div>;
   return <div className="place">{rank}.</div>;
 }
-function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [], onSelectUser }) {
+const LeaderboardSidebar = React.memo(function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [], onSelectUser }) {
   const [tab, setTab] = useState("leaderboard");
   if (collapsed) {
     return (
@@ -324,6 +324,7 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [], onSel
             {rows.map((row, i) => (
               <div className="row" key={row.id != null ? row.id : i}
                 onClick={() => row.id != null && onSelectUser && onSelectUser(row.id)}
+                onMouseEnter={() => row.id != null && apiFetch("/api/user/" + row.id + "/profile")}
                 style={{ cursor: row.id != null ? 'pointer' : 'default' }}>
                 <LbMedal rank={String(i + 1)} />
                 <Avatar src={row.img} g={row.g} e={row.e} className="avatar" />
@@ -371,7 +372,7 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [], onSel
       </section>
     </aside>
   );
-}
+});
 
 // Profil d'un user affiche inline (a la place de Popular Groups/Tickers) au clic
 // sur une ligne du leaderboard. Isole dans son propre composant pour que le hook
@@ -398,7 +399,7 @@ function InlineUserProfile({ id, onClose }) {
         ? <Spinner />
         : data.success === false
         ? <p className="text-sm text-zinc-500">User not found.</p>
-        : <ProfileContent data={data} />}
+        : <ProfileContent data={data} showGroupsCreated={false} />}
     </section>
   );
 }
@@ -409,6 +410,9 @@ export default function Versus() {
   const [groupTime, setGroupTime] = useState("1h");
   const [tickerTime, setTickerTime] = useState("12h");
   const [lbCollapsed, setLbCollapsed] = useState(false);
+  // Callbacks stables pour que LeaderboardSidebar (React.memo) ne se re-render pas
+  // quand seul selectedUser change (le sidebar rend jusqu'a 100 lignes).
+  const toggleLb = useCallback(() => setLbCollapsed(v => !v), []);
   const [tokenImgs, setTokenImgs] = useState({}); // addr -> { img, twitter, telegram }
   const [lbLg, setLbLg] = useState(typeof window !== "undefined" && window.matchMedia("(min-width:1024px)").matches);
   useEffect(() => {
@@ -505,7 +509,7 @@ export default function Versus() {
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
       <div className="hidden lg:block lb-fixed" style={{ top: lbTop }}>
-        <LeaderboardSidebar collapsed={lbCollapsed} onToggle={() => setLbCollapsed(v => !v)} rows={lbUsers} tokens={tickers} onSelectUser={setSelectedUser} />
+        <LeaderboardSidebar collapsed={lbCollapsed} onToggle={toggleLb} rows={lbUsers} tokens={tickers} onSelectUser={setSelectedUser} />
       </div>
       <div className="flex flex-col flex-1 bg-[#0b0b0c]">
         <div ref={lbTopRef} className="sticky top-0 z-50 bg-[#0b0b0c]">

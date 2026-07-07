@@ -3,6 +3,7 @@ from pathlib import Path
 
 import re
 import time
+import threading
 import secrets
 import hashlib
 import hmac
@@ -112,6 +113,15 @@ group_join_requests = db['group_join_requests']
 tg_link_tokens = db['tg_link_tokens']
 # Cache persistant des groupes rejoints par user (affichage instantane de Your Groups).
 user_joined_groups = db['user_joined_groups']
+# Leaderboard des users PRECALCULE (un doc par caller_id + doc '__meta__').
+# Reconstruit periodiquement en tache de fond (stale-while-revalidate) pour que
+# /api/all-callers et /api/user/<id>/profile repondent instantanement sans agregation
+# live ni appel Telegram. Voir _rebuild_user_stats / _maybe_refresh_user_stats.
+user_stats = db['user_stats']
+try:
+    user_stats.create_index([('calls', -1), ('total_stat', -1)])
+except Exception as _e:
+    logger.warning(f"user_stats index creation failed: {_e}")
 try:
     app_users.create_index('email', unique=True)
     app_sessions.create_index('token', unique=True)
@@ -1510,41 +1520,120 @@ def get_group_detail_endpoint(group_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# =====================================================================
+#  Leaderboard des users PRECALCULE (collection user_stats)
+#  Agregation globale par caller_id, reconstruite en tache de fond
+#  (stale-while-revalidate). Les endpoints lisent la collection -> reponse
+#  instantanee, sans agregation live ni appel Telegram.
+# =====================================================================
+USER_STATS_TTL = 120  # secondes : au-dela, on declenche une reconstruction en fond
+_user_stats_lock = threading.Lock()
+_user_stats_building = False  # garde : une seule reconstruction a la fois
+
+
+def _rebuild_user_stats():
+    """Recalcule le leaderboard des users et l'ecrit dans user_stats (bulk upsert).
+    Un doc par caller_id + un doc '__meta__' avec updated_at."""
+    global _user_stats_building
+    try:
+        pipeline = [
+            {'$match': {'caller_id': {'$ne': None}}},
+            {'$group': {
+                '_id': '$caller_id',
+                'name': {'$first': {'$ifNull': ['$caller_name', 'Unknown']}},
+                'username': {'$first': '$caller_username'},
+                'wins': {'$sum': '$wins'},
+                'defeats': {'$sum': '$defeat'},
+                'total_stat': {'$sum': '$current_stat'},
+                'max_stat': {'$max': '$current_stat'},
+                'calls': {'$sum': 1},
+                'groups': {'$addToSet': '$group_id'},
+                'first_call': {'$min': '$creation_time'},
+            }},
+            {'$sort': {'calls': -1, 'total_stat': -1}},
+        ]
+        from pymongo import ReplaceOne
+        ops = []
+        now = time.time()
+        rank = 0
+        for c in users_collection.aggregate(pipeline, allowDiskUse=True):
+            rank += 1
+            c_calls = c.get('calls', 0) or 0
+            wins = c.get('wins', 0) or 0
+            defeats = c.get('defeats', 0) or 0
+            win_rate = round((wins / (wins + defeats) * 100)) if (wins + defeats) > 0 else 0
+            avg = (c.get('total_stat', 0) / c_calls) if c_calls > 0 else 0
+            groups = [g for g in (c.get('groups') or []) if g is not None]
+            doc = {
+                '_id': c['_id'],
+                'name': c.get('name') or 'Unknown',
+                'username': c.get('username'),
+                'wins': wins,
+                'defeats': defeats,
+                'win_rate': win_rate,
+                'calls': c_calls,
+                'total_stat': c.get('total_stat', 0) or 0,
+                'max_stat': c.get('max_stat', 0) or 0,
+                'avg': round(avg, 1),
+                'high': c.get('max_stat', 0) or 0,
+                'groups_joined': len(groups),
+                'first_call': c.get('first_call'),
+                'rank': rank,
+                'updated_at': now,
+            }
+            ops.append(ReplaceOne({'_id': c['_id']}, doc, upsert=True))
+        if ops:
+            user_stats.bulk_write(ops, ordered=False)
+        # Purge des callers disparus (docs plus anciens que ce build).
+        user_stats.delete_many({'_id': {'$ne': '__meta__'}, 'updated_at': {'$lt': now}})
+        user_stats.replace_one({'_id': '__meta__'},
+                               {'_id': '__meta__', 'updated_at': now}, upsert=True)
+        logger.info(f"user_stats rebuilt: {len(ops)} callers")
+    except Exception as e:
+        logger.error(f"_rebuild_user_stats failed: {e}")
+    finally:
+        with _user_stats_lock:
+            _user_stats_building = False
+
+
+def _maybe_refresh_user_stats():
+    """Declenche une reconstruction si les donnees sont perimees (> TTL). Au tout
+    premier appel (collection vide), reconstruit de facon SYNCHRONE. Sinon lance un
+    thread de fond et sert les donnees courantes (stale-while-revalidate)."""
+    global _user_stats_building
+    meta = user_stats.find_one({'_id': '__meta__'})
+    if not meta:
+        # Cold start : build synchrone une fois pour avoir des donnees a servir.
+        with _user_stats_lock:
+            if _user_stats_building:
+                return
+            _user_stats_building = True
+        _rebuild_user_stats()
+        return
+    if (time.time() - meta.get('updated_at', 0)) < USER_STATS_TTL:
+        return
+    with _user_stats_lock:
+        if _user_stats_building:
+            return
+        _user_stats_building = True
+    threading.Thread(target=_rebuild_user_stats, daemon=True).start()
+
+
 @app.route('/api/all-callers', methods=['GET'])
 def get_all_callers():
-    """Classement global des users (auteurs de calls), tous groupes confondus.
-    Agrege users_collection par caller_id (exclut les docs sans caller_id).
-    Utilise pour le leaderboard 'users' du menu de gauche de l'accueil."""
-    pipeline = [
-        {'$match': {'caller_id': {'$ne': None}}},
-        {'$group': {
-            '_id': '$caller_id',
-            'name': {'$first': {'$ifNull': ['$caller_name', 'Unknown']}},
-            'username': {'$first': '$caller_username'},
-            'wins': {'$sum': '$wins'},
-            'defeats': {'$sum': '$defeat'},
-            'total_stat': {'$sum': '$current_stat'},
-            'max_stat': {'$max': '$current_stat'},
-            'calls': {'$sum': 1},
-        }},
-        {'$sort': {'calls': -1, 'total_stat': -1}},
-        {'$limit': 100},
-    ]
+    """Classement global des users (auteurs de calls), lu depuis user_stats
+    (precalcule). Utilise pour le leaderboard 'users' du menu de gauche de l'accueil."""
+    _maybe_refresh_user_stats()
     out = []
-    for c in users_collection.aggregate(pipeline):
-        c_calls = c.get('calls', 0) or 0
-        wins = c.get('wins', 0) or 0
-        defeats = c.get('defeats', 0) or 0
-        win_rate = round((wins / (wins + defeats) * 100)) if (wins + defeats) > 0 else 0
-        avg = (c.get('total_stat', 0) / c_calls) if c_calls > 0 else 0
+    for c in user_stats.find({'_id': {'$ne': '__meta__'}}).sort('calls', -1).limit(100):
         out.append({
             'caller_id': c['_id'],
             'name': c.get('name') or 'Unknown',
             'username': c.get('username'),
-            'win': f"{win_rate}%",
-            'avg': f"{avg:.1f}x",
-            'high': f"{c.get('max_stat', 0)}x",
-            'calls': c_calls,
+            'win': f"{c.get('win_rate', 0)}%",
+            'avg': f"{c.get('avg', 0)}x",
+            'high': f"{c.get('high', 0)}x",
+            'calls': c.get('calls', 0),
             'img': f"/api/user-photo/{c['_id']}",
         })
     return jsonify({'success': True, 'data': out})
@@ -1553,24 +1642,37 @@ def get_all_callers():
 @app.route('/api/user/<caller_id>/profile', methods=['GET'])
 def get_user_profile(caller_id):
     """Profil public d'un user (auteur de calls), meme schema que /api/me/profile
-    mais pour un caller_id arbitraire et sans authentification. Utilise pour le
-    profil inline affiche au clic sur un user du leaderboard."""
+    mais pour un caller_id arbitraire et sans authentification. Stats lues depuis
+    user_stats (precalcule, aucun appel Telegram) ; listes de calls lues en direct
+    (find indexes, rapides). Utilise pour le profil inline du leaderboard."""
     try:
         cid = int(caller_id)
     except (TypeError, ValueError):
         return jsonify({'success': False, 'error': 'invalid_caller_id'}), 400
 
-    stats = _user_call_stats(cid)
-    if stats['scans'] == 0:
-        return jsonify({'success': False, 'error': 'user_not_found'}), 404
+    _maybe_refresh_user_stats()
+    st = user_stats.find_one({'_id': cid})
 
     your_docs = list(users_collection.find({'caller_id': cid}).sort('creation_time', -1).limit(15))
-    # Identite : prise depuis un doc du user (le plus recent).
-    head = your_docs[0] if your_docs else {}
-    username = head.get('caller_username')
-    firstName = head.get('caller_name') or 'Unknown'
+    if st is None and not your_docs:
+        return jsonify({'success': False, 'error': 'user_not_found'}), 404
 
-    # Groupes distincts ou le user a calle -> groups_joined + group_calls.
+    # Fallback si le doc precalcule n'existe pas encore (caller tres recent).
+    if st is None:
+        fb = _user_call_stats(cid)
+        joined_ids_fb = [g for g in users_collection.distinct('group_id', {'caller_id': cid}) if g is not None]
+        st = {
+            'name': (your_docs[0].get('caller_name') if your_docs else None) or 'Unknown',
+            'username': your_docs[0].get('caller_username') if your_docs else None,
+            'wins': fb['wins'], 'defeats': fb['defeats'], 'win_rate': fb['win_rate'],
+            'calls': fb['scans'], 'groups_joined': len(joined_ids_fb),
+            'first_call': None,
+        }
+
+    username = st.get('username')
+    firstName = st.get('name') or 'Unknown'
+
+    # group_calls : derniers calls des groupes ou le user a calle.
     joined_ids = users_collection.distinct('group_id', {'caller_id': cid})
     group_docs = list(users_collection.find(
         {'group_id': {'$in': joined_ids}}).sort('creation_time', -1).limit(50)) if joined_ids else []
@@ -1578,22 +1680,19 @@ def get_user_profile(caller_id):
     your_calls = [_profile_call_row(d) for d in your_docs]
     group_calls = [_profile_call_row(d) for d in group_docs]
 
-    try:
-        groups_created = _groups_created_count(cid)
-    except Exception:
-        groups_created = 0
-
     out_stats = {
-        'scans': stats['scans'], 'wins': stats['wins'], 'defeats': stats['defeats'],
-        'win_rate': stats['win_rate'],
-        'groups_joined': len([g for g in joined_ids if g is not None]),
-        'groups_created': groups_created,
+        'scans': st.get('calls', 0),
+        'wins': st.get('wins', 0),
+        'defeats': st.get('defeats', 0),
+        'win_rate': st.get('win_rate', 0),
+        'groups_joined': st.get('groups_joined', 0),
+        # groups_created non calcule pour un tiers (necessiterait des appels Telegram).
     }
-    # created_time du doc le plus ancien -> "Joined".
-    joined_at = None
-    oldest = list(users_collection.find({'caller_id': cid}).sort('creation_time', 1).limit(1))
-    if oldest:
-        joined_at = oldest[0].get('creation_time')
+    joined_at = st.get('first_call')
+    if joined_at is None and your_docs:
+        oldest = list(users_collection.find({'caller_id': cid}).sort('creation_time', 1).limit(1))
+        if oldest:
+            joined_at = oldest[0].get('creation_time')
 
     return jsonify({
         'success': True,
