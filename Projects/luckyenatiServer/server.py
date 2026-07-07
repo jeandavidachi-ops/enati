@@ -1235,6 +1235,30 @@ def _ago(ts):
     return f"{int(secs // 86400)}d ago"
 
 
+def _profile_call_row(d):
+    """Transforme un document 'call' (users_collection) en ligne pour les tables
+    du profil (Your Calls / Groups Calls). Partage entre /api/me/profile et
+    /api/user/<id>/profile."""
+    addr = d.get('contract_address') or ''
+    mcap_then = _to_float(d.get('market_cap'))
+    # Mcap courant : lu depuis la base (stocke par le bot), pas d'appel live.
+    mcap_now = _to_float(d.get('current_market_cap'))
+    # PnL : derive du multiple si dispo.
+    cs = _to_float(d.get('current_stat'))
+    pnl_pct = round((cs - 1) * 100, 2) if cs else None
+    return {
+        'symbol': d.get('coin_name') or 'Unknown',
+        'name': d.get('coin_name') or 'Unknown',
+        'contract': addr,
+        'image': (f'/api/token-photo/{addr}' if addr else None),
+        'mcap_then': mcap_then,
+        'mcap_now': mcap_now,
+        'pnl_pct': pnl_pct,
+        'caller_username': d.get('caller_username'),
+        'ago': _ago(d.get('creation_time')),
+    }
+
+
 @app.route('/api/me/profile', methods=['GET'])
 def get_me_profile():
     """Donnees completes de la page profil : header, stats, anneau win rate,
@@ -1253,30 +1277,8 @@ def get_me_profile():
     group_docs = list(users_collection.find(
         {'group_id': {'$in': joined_ids}}).sort('creation_time', -1).limit(50)) if joined_ids else []
 
-    def _row(d):
-        addr = d.get('contract_address') or ''
-        mcap_then = _to_float(d.get('market_cap'))
-        # Mcap courant : lu depuis la base (stocke par le bot), pas d'appel live.
-        mcap_now = _to_float(d.get('current_market_cap'))
-        # PnL : laisse en mockup pour l'instant (derive du multiple si dispo).
-        cs = _to_float(d.get('current_stat'))
-        pnl_pct = round((cs - 1) * 100, 2) if cs else None
-        # Image : servie par /api/token-photo (depuis la base ; resolution paresseuse
-        # avec fallback pump.fun + cache negatif cote endpoint).
-        return {
-            'symbol': d.get('coin_name') or 'Unknown',
-            'name': d.get('coin_name') or 'Unknown',
-            'contract': addr,
-            'image': (f'/api/token-photo/{addr}' if addr else None),
-            'mcap_then': mcap_then,
-            'mcap_now': mcap_now,
-            'pnl_pct': pnl_pct,
-            'caller_username': d.get('caller_username'),
-            'ago': _ago(d.get('creation_time')),
-        }
-
-    your_calls = [_row(d) for d in your_docs]
-    group_calls = [_row(d) for d in group_docs]
+    your_calls = [_profile_call_row(d) for d in your_docs]
+    group_calls = [_profile_call_row(d) for d in group_docs]
 
     out_stats = {
         'scans': stats['scans'], 'wins': stats['wins'], 'defeats': stats['defeats'],
@@ -1506,6 +1508,105 @@ def get_group_detail_endpoint(group_id):
     except Exception as e:
         logger.error(f"Error in get_group_detail for {group_id}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/all-callers', methods=['GET'])
+def get_all_callers():
+    """Classement global des users (auteurs de calls), tous groupes confondus.
+    Agrege users_collection par caller_id (exclut les docs sans caller_id).
+    Utilise pour le leaderboard 'users' du menu de gauche de l'accueil."""
+    pipeline = [
+        {'$match': {'caller_id': {'$ne': None}}},
+        {'$group': {
+            '_id': '$caller_id',
+            'name': {'$first': {'$ifNull': ['$caller_name', 'Unknown']}},
+            'username': {'$first': '$caller_username'},
+            'wins': {'$sum': '$wins'},
+            'defeats': {'$sum': '$defeat'},
+            'total_stat': {'$sum': '$current_stat'},
+            'max_stat': {'$max': '$current_stat'},
+            'calls': {'$sum': 1},
+        }},
+        {'$sort': {'calls': -1, 'total_stat': -1}},
+        {'$limit': 100},
+    ]
+    out = []
+    for c in users_collection.aggregate(pipeline):
+        c_calls = c.get('calls', 0) or 0
+        wins = c.get('wins', 0) or 0
+        defeats = c.get('defeats', 0) or 0
+        win_rate = round((wins / (wins + defeats) * 100)) if (wins + defeats) > 0 else 0
+        avg = (c.get('total_stat', 0) / c_calls) if c_calls > 0 else 0
+        out.append({
+            'caller_id': c['_id'],
+            'name': c.get('name') or 'Unknown',
+            'username': c.get('username'),
+            'win': f"{win_rate}%",
+            'avg': f"{avg:.1f}x",
+            'high': f"{c.get('max_stat', 0)}x",
+            'calls': c_calls,
+            'img': f"/api/user-photo/{c['_id']}",
+        })
+    return jsonify({'success': True, 'data': out})
+
+
+@app.route('/api/user/<caller_id>/profile', methods=['GET'])
+def get_user_profile(caller_id):
+    """Profil public d'un user (auteur de calls), meme schema que /api/me/profile
+    mais pour un caller_id arbitraire et sans authentification. Utilise pour le
+    profil inline affiche au clic sur un user du leaderboard."""
+    try:
+        cid = int(caller_id)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'invalid_caller_id'}), 400
+
+    stats = _user_call_stats(cid)
+    if stats['scans'] == 0:
+        return jsonify({'success': False, 'error': 'user_not_found'}), 404
+
+    your_docs = list(users_collection.find({'caller_id': cid}).sort('creation_time', -1).limit(15))
+    # Identite : prise depuis un doc du user (le plus recent).
+    head = your_docs[0] if your_docs else {}
+    username = head.get('caller_username')
+    firstName = head.get('caller_name') or 'Unknown'
+
+    # Groupes distincts ou le user a calle -> groups_joined + group_calls.
+    joined_ids = users_collection.distinct('group_id', {'caller_id': cid})
+    group_docs = list(users_collection.find(
+        {'group_id': {'$in': joined_ids}}).sort('creation_time', -1).limit(50)) if joined_ids else []
+
+    your_calls = [_profile_call_row(d) for d in your_docs]
+    group_calls = [_profile_call_row(d) for d in group_docs]
+
+    try:
+        groups_created = _groups_created_count(cid)
+    except Exception:
+        groups_created = 0
+
+    out_stats = {
+        'scans': stats['scans'], 'wins': stats['wins'], 'defeats': stats['defeats'],
+        'win_rate': stats['win_rate'],
+        'groups_joined': len([g for g in joined_ids if g is not None]),
+        'groups_created': groups_created,
+    }
+    # created_time du doc le plus ancien -> "Joined".
+    joined_at = None
+    oldest = list(users_collection.find({'caller_id': cid}).sort('creation_time', 1).limit(1))
+    if oldest:
+        joined_at = oldest[0].get('creation_time')
+
+    return jsonify({
+        'success': True,
+        'telegram': {
+            'id': cid, 'username': username, 'firstName': firstName, 'photoUrl': None,
+        },
+        'name': firstName,
+        'joined_at': joined_at,
+        'stats': out_stats,
+        'your_calls': your_calls,
+        'group_calls': group_calls,
+    })
+
 
 def get_shared_contracts_analysis():
     """

@@ -19,6 +19,7 @@ export default function App() {
       '/api/all-groups-stats',
       '/api/shared-contracts',
       '/api/latest-records',
+      '/api/all-callers',
       '/api/auth/me',
     ])
   }, [])

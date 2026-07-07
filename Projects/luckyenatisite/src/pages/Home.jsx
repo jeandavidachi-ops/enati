@@ -4,6 +4,7 @@ import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
 import { useApi, apiFetch, apiInvalidate } from '../lib/api.js'
+import ProfileContent from './ProfileContent.jsx'
 
 // ---- Helpers ----
 const GRADS = [
@@ -278,7 +279,7 @@ function LbMedal({ rank }) {
   if (rank === "3") return <div className="medal bronze"><span>3</span></div>;
   return <div className="place">{rank}.</div>;
 }
-function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [] }) {
+function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [], onSelectUser }) {
   const [tab, setTab] = useState("leaderboard");
   if (collapsed) {
     return (
@@ -321,11 +322,13 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [] }) {
           <div className="dash"></div>
           <div className="rows">
             {rows.map((row, i) => (
-              <div className="row" key={row.id != null ? row.id : i}>
+              <div className="row" key={row.id != null ? row.id : i}
+                onClick={() => row.id != null && onSelectUser && onSelectUser(row.id)}
+                style={{ cursor: row.id != null ? 'pointer' : 'default' }}>
                 <LbMedal rank={String(i + 1)} />
                 <Avatar src={row.img} g={row.g} e={row.e} className="avatar" />
                 <div className="user"><strong>{row.name}</strong></div>
-                <div className="right"><div className="pnl">$0</div></div>
+                <div className="right"><div className="pnl">{row.win || ''}</div></div>
               </div>
             ))}
           </div>
@@ -370,8 +373,28 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [] }) {
   );
 }
 
+// Profil d'un user affiche inline (a la place de Popular Groups/Tickers) au clic
+// sur une ligne du leaderboard. Isole dans son propre composant pour que le hook
+// useApi ne soit pas appele conditionnellement dans Versus.
+function InlineUserProfile({ id, onClose }) {
+  const data = useApi("/api/user/" + id + "/profile");
+  return (
+    <section id="user-profile" style={{ fontFamily: "'Inter',system-ui,sans-serif" }}>
+      <button onClick={onClose}
+        className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white mb-4">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M19 12H5M11 18l-6-6 6-6" /></svg>
+        Back
+      </button>
+      {data && data.success === false
+        ? <p className="text-sm text-zinc-500">User not found.</p>
+        : <ProfileContent data={data} />}
+    </section>
+  );
+}
+
 export default function Versus() {
   useGlobalZoom();
+  const [selectedUser, setSelectedUser] = useState(null);
   const [groupTime, setGroupTime] = useState("1h");
   const [tickerTime, setTickerTime] = useState("12h");
   const [lbCollapsed, setLbCollapsed] = useState(false);
@@ -401,6 +424,16 @@ export default function Versus() {
   const groupsStats = useApi("/api/all-groups-stats");
   const sharedRes = useApi("/api/shared-contracts");
   const latestRes = useApi("/api/latest-records");
+  const callersRes = useApi("/api/all-callers");
+
+  // Leaderboard "users" du menu de gauche : auteurs de calls (tous groupes).
+  const lbUsers = useMemo(() => (callersRes?.data || []).map((c) => ({
+    id: c.caller_id,
+    name: c.username ? "@" + c.username : (c.name || "Unknown"),
+    img: c.caller_id != null ? ("/api/user-photo/" + c.caller_id) : null,
+    win: c.win,
+    calls: c.calls,
+  })), [callersRes]);
 
   // Nombre de groupes par token (contract_address -> groups_count)
   const sharedMap = useMemo(() => {
@@ -427,22 +460,6 @@ export default function Versus() {
   useEffect(() => {
     if (lbTopRef.current) setLbTop(lbTopRef.current.offsetHeight);
   }, [groups]);
-
-  // Lignes du leaderboard latÃ©ral
-  const lbRows = useMemo(() => (groupsStats?.data || []).map((g, i) => {
-    const calls = g.total_members || 0;
-    const avg = calls > 0 ? (g.total_current_stat || 0) / calls : 0;
-    return {
-      id: g.group_id,
-      name: g.group_name || "Unknown",
-      win: Math.round(g.win_rate || 0),
-      avg: avg.toFixed(1),
-      high: g.max_current_stat || 0,
-      calls: calls,
-      img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
-      g: gradOf(i), e: emojiOf(i),
-    };
-  }), [groupsStats]);
 
   // Derniers coins (Popular Tickers) + leur image (mise en cache)
   const tickers = useMemo(() => (latestRes?.data || []).slice(0, 12).map((c, i) => {
@@ -477,7 +494,7 @@ export default function Versus() {
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
       <div className="hidden lg:block lb-fixed" style={{ top: lbTop }}>
-        <LeaderboardSidebar collapsed={lbCollapsed} onToggle={() => setLbCollapsed(v => !v)} rows={lbRows} tokens={tickers} />
+        <LeaderboardSidebar collapsed={lbCollapsed} onToggle={() => setLbCollapsed(v => !v)} rows={lbUsers} tokens={tickers} onSelectUser={setSelectedUser} />
       </div>
       <div className="flex flex-col flex-1 bg-[#0b0b0c]">
         <div ref={lbTopRef} className="sticky top-0 z-50 bg-[#0b0b0c]">
@@ -518,6 +535,10 @@ export default function Versus() {
 
         <div className="flex-1 flex flex-col" style={{ paddingLeft: lbPad }}>
         <main className="flex-1 pl-6 pr-4 sm:pr-6 lg:pr-10 xl:pr-16 2xl:pr-24 py-8">
+          {selectedUser != null ? (
+          <InlineUserProfile id={selectedUser} onClose={() => setSelectedUser(null)} />
+          ) : (
+          <>
           <section id="groups">
             <div className="flex items-start justify-between">
               <div>
@@ -568,6 +589,8 @@ export default function Versus() {
               <Link to="/ticker" className="rounded-xl bg-zinc-900 ring-1 ring-white/10 px-5 py-2.5 text-sm font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">Explore all</Link>
             </div>
           </section>
+          </>
+          )}
         </main>
 
         <footer className="px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-24 py-8">
