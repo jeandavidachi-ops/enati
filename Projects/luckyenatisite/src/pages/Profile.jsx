@@ -84,12 +84,12 @@ function WinRateCard({ stats }) {
 
 function TokenCell({ symbol, image, size = 26 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
       {image
         ? <img src={image} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }}
             style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, objectFit: 'cover', background: '#1b2022' }} />
         : <span style={{ width: size, height: size, borderRadius: '50%', background: '#1b2022', flexShrink: 0 }}></span>}
-      <span style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>{symbol}</span>
+      <span style={{ fontSize: 15, fontWeight: 600, color: '#fff', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{symbol}</span>
     </div>
   )
 }
@@ -102,7 +102,7 @@ function GroupCallsCard({ rows }) {
         <span style={{ fontSize: 18, fontWeight: 600, color: '#fff' }}>Groups Calls</span>
       </div>
       <div style={{ fontSize: 13, color: '#7a8085', marginTop: 5 }}>All calls from the groups you're in</div>
-      <div style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', padding: '16px 0 12px', borderBottom: '1px solid #1f2427' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: cols, columnGap: 10, alignItems: 'center', padding: '16px 0 12px', borderBottom: '1px solid #1f2427' }}>
         <span style={{ fontSize: 13, color: '#7a8085' }}>Token</span>
         <span style={{ fontSize: 13, color: '#7a8085' }}>First Call</span>
         <span style={{ fontSize: 13, color: '#7a8085' }}>Current MCAP</span>
@@ -112,11 +112,11 @@ function GroupCallsCard({ rows }) {
       {/* ~9 lignes visibles (44px/ligne) puis scroll vertical. */}
       <div style={{ maxHeight: 396, overflowY: 'auto' }}>
         {rows.map((r, i) => (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #191d1f' }}>
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, columnGap: 10, alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #191d1f' }}>
             <TokenCell symbol={r.symbol} image={r.image} />
-            <div><div style={{ fontSize: 14, color: '#e6e8ea' }}>{fmtMc(r.mcap_then)}</div><div style={{ fontSize: 12, color: '#7a8085', marginTop: 2 }}>{r.ago}</div></div>
-            <div style={{ fontSize: 14, color: '#e6e8ea' }}>{fmtMc(r.mcap_now)}</div>
-            <div style={{ fontSize: 13, color: '#787e83' }}>{r.caller_username ? '@' + r.caller_username : '—'}</div>
+            <div style={{ minWidth: 0 }}><div style={{ fontSize: 14, color: '#e6e8ea', whiteSpace: 'nowrap' }}>{fmtMc(r.mcap_then)}</div><div style={{ fontSize: 12, color: '#7a8085', marginTop: 2, whiteSpace: 'nowrap' }}>{r.ago}</div></div>
+            <div style={{ fontSize: 14, color: '#e6e8ea', minWidth: 0, whiteSpace: 'nowrap' }}>{fmtMc(r.mcap_now)}</div>
+            <div style={{ fontSize: 13, color: '#787e83', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.caller_username ? '@' + r.caller_username : '—'}</div>
           </div>
         ))}
       </div>
@@ -134,7 +134,7 @@ function YourCallsCard({ rows }) {
           <span style={{ fontSize: 13, fontWeight: 600, color: '#9aa0a4', background: '#1e2225', borderRadius: 6, padding: '2px 8px' }}>{rows.length}</span>
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', padding: '18px 0 12px', borderBottom: '1px solid #1f2427' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: cols, columnGap: 10, alignItems: 'center', padding: '18px 0 12px', borderBottom: '1px solid #1f2427' }}>
         <span style={{ fontSize: 13, color: '#7a8085' }}>Token</span>
         <span style={{ fontSize: 13, color: '#7a8085' }}>First Call</span>
         <span style={{ fontSize: 13, color: '#7a8085' }}>Current MCAP</span>
@@ -144,11 +144,11 @@ function YourCallsCard({ rows }) {
       {rows.map((r, i) => {
         const pnl = fmtPnl(r.pnl_pct)
         return (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #17191b' }}>
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: cols, columnGap: 10, alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #17191b' }}>
             <TokenCell symbol={r.symbol} image={r.image} size={30} />
-            <div><div style={{ fontSize: 14, color: '#e6e8ea' }}>{fmtMc(r.mcap_then)}</div><div style={{ fontSize: 12, color: '#7a8085', marginTop: 2 }}>{r.ago}</div></div>
-            <div style={{ fontSize: 14, color: '#e6e8ea' }}>{fmtMc(r.mcap_now)}</div>
-            <div style={{ textAlign: 'right' }}><div style={{ fontSize: 14, fontWeight: 600, color: pnl.color }}>{pnl.text}</div></div>
+            <div style={{ minWidth: 0 }}><div style={{ fontSize: 14, color: '#e6e8ea', whiteSpace: 'nowrap' }}>{fmtMc(r.mcap_then)}</div><div style={{ fontSize: 12, color: '#7a8085', marginTop: 2, whiteSpace: 'nowrap' }}>{r.ago}</div></div>
+            <div style={{ fontSize: 14, color: '#e6e8ea', minWidth: 0, whiteSpace: 'nowrap' }}>{fmtMc(r.mcap_now)}</div>
+            <div style={{ textAlign: 'right', minWidth: 0 }}><div style={{ fontSize: 14, fontWeight: 600, color: pnl.color, whiteSpace: 'nowrap' }}>{pnl.text}</div></div>
           </div>
         )
       })}
