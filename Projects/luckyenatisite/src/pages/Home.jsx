@@ -274,7 +274,7 @@ function LbMedal({ rank }) {
   if (rank === "3") return <div className="medal bronze"><span>3</span></div>;
   return <div className="place">{rank}.</div>;
 }
-const LeaderboardSidebar = React.memo(function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [], onSelectUser }) {
+const LeaderboardSidebar = React.memo(function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [], onSelectUser, myPhoto }) {
   const [tab, setTab] = useState("leaderboard");
   if (collapsed) {
     return (
@@ -304,7 +304,12 @@ const LeaderboardSidebar = React.memo(function LeaderboardSidebar({ collapsed, o
             <button className="selected">ALL</button>
           </div>
           <div className="your-rank">
-            <div className="rank-avatar logo">âˆž</div>
+            {myPhoto
+              ? <div className="rank-avatar" style={{ position: 'relative', overflow: 'hidden' }}>
+                  <img src={myPhoto} alt="" onError={(e) => { e.currentTarget.style.display = "none" }}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
+                </div>
+              : <div className="rank-avatar logo">∞</div>}
             <div>
               <div className="muted">Your rank</div>
               <div className="rankline"><span>#</span> -</div>
@@ -431,6 +436,8 @@ export default function Versus() {
   }, []);
 
   // Donnees depuis le cache (rendu instantane si prechargees au demarrage).
+  const myUser = useApi("/api/auth/me")?.user;
+  const myPhoto = myUser?.telegram?.id ? "/api/user-photo/" + myUser.telegram.id : null;
   const groupsStats = useApi("/api/all-groups-stats");
   const sharedRes = useApi("/api/shared-contracts");
   const latestRes = useApi("/api/latest-records");
@@ -504,7 +511,7 @@ export default function Versus() {
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
       <div className="hidden lg:block lb-fixed" style={{ top: lbTop }}>
-        <LeaderboardSidebar collapsed={lbCollapsed} onToggle={toggleLb} rows={lbUsers} tokens={tickers} onSelectUser={setSelectedUser} />
+        <LeaderboardSidebar collapsed={lbCollapsed} onToggle={toggleLb} rows={lbUsers} tokens={tickers} onSelectUser={setSelectedUser} myPhoto={myPhoto} />
       </div>
       <div className="flex flex-col flex-1 bg-[#0b0b0c]">
         <div ref={lbTopRef} className="sticky top-0 z-50 bg-[#0b0b0c]">
