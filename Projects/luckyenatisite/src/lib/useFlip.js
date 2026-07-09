@@ -13,6 +13,7 @@ export default function useFlip(containerRef, orderedIds) {
   const prevRects = useRef(new Map())   // id -> DOMRect precedent
   const prevIndex = useRef(new Map())   // id -> index de rang precedent
   const prevIds = useRef(null)          // Set des ids du passage precedent
+  const prevOrderSig = useRef(null)     // signature de l'ordre (sequence d'ids) precedent
   const prevWidth = useRef(null)        // largeur du conteneur au passage precedent
   const flashTimers = useRef(new Map()) // id -> timeout de nettoyage de classe
 
@@ -47,7 +48,13 @@ export default function useFlip(containerRef, orderedIds) {
     // positions relatives changent sans reclassement. La largeur mesuree du conteneur
     // change dans ces cas-la (jamais lors d'un simple reorder) -> on skip l'anim.
     const sameWidth = prevWidth.current != null && Math.abs(prevWidth.current - base.width) < 0.5
-    const canAnimate = sameSet && sameWidth && !reduce
+    // Garde principal : n'animer QUE si l'ordre a reellement change. Un reflow au
+    // chargement (webfonts/contenu qui changent la HAUTEUR des cards -> re-agencement
+    // de la grille) bouge les positions SANS changer l'ordre -> on ne doit pas animer.
+    // (Les rows a hauteur fixe ne reflowent pas, d'ou le glitch limite aux cards.)
+    const curSig = (orderedIds || []).map(String).join('|')
+    const orderChanged = prevOrderSig.current != null && prevOrderSig.current !== curSig
+    const canAnimate = sameSet && sameWidth && orderChanged && !reduce
 
     els.forEach((el) => {
       const id = el.getAttribute('data-flip-id')
@@ -98,6 +105,7 @@ export default function useFlip(containerRef, orderedIds) {
     // Memorise index de rang, ensemble des ids et largeur pour le prochain passage.
     prevIndex.current = curIndex
     prevIds.current = curIds
+    prevOrderSig.current = curSig
     prevWidth.current = base.width
 
     // Purge les ids disparus.
