@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
 import { useApi, apiFetch, apiInvalidate } from '../lib/api.js'
+import useFlip from '../lib/useFlip.js'
+import { useLiveList, sortGroups, sortTickers, demoGroups, demoTickers } from '../lib/liveList.js'
 
 // ---- Helpers ----
 const GRADS = [
@@ -61,7 +63,7 @@ function prefetchDetail(href) {
   if (href.startsWith("/group/")) apiFetch("/api/group/" + href.slice(7));
   else if (href.startsWith("/ticker/")) apiFetch("/api/token/" + href.slice(8));
 }
-function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, telegram, groupId }) {
+function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, telegram, groupId, flipId }) {
   const Tag = href ? Link : "article";
   const [joinBusy, setJoinBusy] = useState(false);
   // Ouvre le lien social sans declencher la navigation de la card (evite l'<a> imbrique).
@@ -83,7 +85,8 @@ function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, teleg
   };
   return (
     <Tag {...(href ? { to: href, onMouseEnter: () => prefetchDetail(href) } : {})}
-      className={"relative w-full block overflow-hidden rounded-[20px] elevate-card" + (href ? " cursor-pointer" : "")}
+      {...(flipId != null ? { "data-flip-id": String(flipId) } : {})}
+      className={"relative w-full block overflow-hidden rounded-[20px] elevate-card flip-el" + (href ? " cursor-pointer" : "")}
       style={{ padding: "16px 18px 15px 15px" }}>
       <div className="relative flex gap-4">
         <BlocksThumb src={image} g={g} e={e} />
@@ -172,9 +175,9 @@ export default function App({ type = "group" }) {
   const [page, setPage] = useState(1);
   const [tokenImgs, setTokenImgs] = useState({}); // addr -> { img, twitter, telegram }
 
-  // Donnees depuis le cache (rendu instantane si prechargees) selon le type.
-  const groupsRes = useApi(TYPE === "group" ? "/api/all-groups-stats" : null);
-  const latestRes = useApi(TYPE === "ticker" ? "/api/latest-records" : null);
+  // Donnees selon le type. useLiveList = polling reel (~8s) + mode demo ?reorder-demo=1.
+  const groupsRes = useLiveList(TYPE === "group" ? "/api/all-groups-stats" : null, { demoMutate: demoGroups });
+  const latestRes = useLiveList(TYPE === "ticker" ? "/api/latest-records" : null, { demoMutate: demoTickers });
   const sharedRes = useApi(TYPE === "ticker" ? "/api/shared-contracts" : null);
 
   const sharedMap = useMemo(() => {
@@ -185,7 +188,7 @@ export default function App({ type = "group" }) {
 
   const items = useMemo(() => {
     if (TYPE === "group") {
-      return (groupsRes?.data || []).map((g, i) => ({
+      return (groupsRes?.data || []).slice().sort(sortGroups).map((g, i) => ({
         id: g.group_id,
         name: g.group_name || "Unknown",
         win: Math.round(g.win_rate || 0),
@@ -195,7 +198,7 @@ export default function App({ type = "group" }) {
         g: gradOf(i), e: emojiOf(i),
       }));
     }
-    return (latestRes?.data || []).map((c, i) => {
+    return (latestRes?.data || []).slice().sort(sortTickers).map((c, i) => {
       const im = tokenImgs[c.contract_address] || {};
       return {
         sym: c.coin_name || "?",
@@ -235,6 +238,11 @@ export default function App({ type = "group" }) {
 
   const go = (n) => { const p = Math.min(pageCount, Math.max(1, n)); setPage(p); window.scrollTo(0, 0); };
 
+  // FLIP : reclassement anime de la grille (page visible).
+  const gridRef = useRef(null);
+  const orderedIds = pageItems.map((d, i) => (TYPE === "group" ? d.id : (d.addr || (d.sym + i))));
+  useFlip(gridRef, orderedIds);
+
   const title = TYPE === "ticker" ? "All Tickers" : "All Groups";
   const subtitle = TYPE === "ticker" ? "Every recently called token." : "Every group making crypto calls.";
   const navCls = (active) => "hover:text-white" + (active ? " text-white" : "");
@@ -271,10 +279,10 @@ export default function App({ type = "group" }) {
               <Link to="/" className="text-sm px-4 py-2 rounded-xl bg-zinc-900 ring-1 ring-white/10 text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">← Home</Link>
             </div>
 
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-6">
+            <div ref={gridRef} className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-6">
               {TYPE === "group"
-                ? pageItems.map((d, i) => (
-                    <BlocksCard key={start + i} image={d.img} name={d.name} g={d.g} e={d.e} join groupId={d.id}
+                ? pageItems.map((d) => (
+                    <BlocksCard key={d.id} flipId={d.id} image={d.img} name={d.name} g={d.g} e={d.e} join groupId={d.id}
                       href={d.id ? ("/group/" + d.id) : null}
                       stats={[
                         { label: "PnL", value: d.win + "%", positive: true },
@@ -283,7 +291,7 @@ export default function App({ type = "group" }) {
                       ]} />
                   ))
                 : pageItems.map((d, i) => (
-                    <BlocksCard key={start + i} image={d.img} name={d.sym} g={d.g} e={d.e}
+                    <BlocksCard key={d.addr || (d.sym + i)} flipId={d.addr || (d.sym + i)} image={d.img} name={d.sym} g={d.g} e={d.e}
                       twitter={d.twitter} telegram={d.telegram}
                       href={d.addr ? ("/ticker/" + encodeURIComponent(d.addr)) : null}
                       stats={[

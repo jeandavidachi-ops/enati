@@ -4,6 +4,8 @@ import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
 import { useApi, apiFetch } from '../lib/api.js'
+import useFlip from '../lib/useFlip.js'
+import { useLiveList, sortGroups, demoGroups } from '../lib/liveList.js'
 
 const GRADS = [
   "from-lime-600 via-emerald-700 to-stone-800","from-sky-400 via-blue-500 to-amber-700",
@@ -224,8 +226,8 @@ function LeaderboardSidebar({ collapsed, onToggle, rows = [] }) {
 
 export default function App() {
   useGlobalZoom();
-  const statsRes = useApi("/api/all-groups-stats");
-  const rows = useMemo(() => (statsRes?.data || []).map((g, i) => {
+  const statsRes = useLiveList("/api/all-groups-stats", { demoMutate: demoGroups });
+  const rows = useMemo(() => (statsRes?.data || []).slice().sort(sortGroups).map((g, i) => {
     const calls = g.total_members || 0;
     const avg = calls > 0 ? (g.total_current_stat || 0) / calls : 0;
     return {
@@ -262,6 +264,9 @@ export default function App() {
     return () => { ro.disconnect(); window.removeEventListener("resize", measure); };
   }, []);
   const top3 = rows.slice(0, 3);
+  // FLIP : reclassement anime des lignes de la table.
+  const tableRef = useRef(null);
+  useFlip(tableRef, rows.map((d) => (d.id != null ? d.id : d.name)));
 
   // Zoom additionnel sur le contenu (podium + table) uniquement, pas le header.
   // Se cumule avec le zoom global de useGlobalZoom (les zoom CSS se multiplient).
@@ -319,7 +324,7 @@ export default function App() {
           </div>
 
           <div className="mt-12 overflow-x-auto">
-            <div style={{ minWidth: 860, borderRadius: 16, overflow: "hidden", background: "#0b0b0c" }}>
+            <div ref={tableRef} style={{ minWidth: 860, borderRadius: 16, overflow: "hidden", background: "#0b0b0c" }}>
               {/* header */}
               <div style={{ display: "grid", gridTemplateColumns: TABLE_COLS, alignItems: "center", gap: 14, padding: "clamp(18px,1.6vw,28px) clamp(16px,3vw,28px) 13px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                 <span style={{ ...THS, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>Position <span style={{ fontSize: 11 }}>↓</span></span>
@@ -337,7 +342,7 @@ export default function App() {
                 const rankColor = rank === 1 ? "#F2B23A" : rank === 3 ? "#E9843C" : "#ededf0";
                 const RowTag = d.id ? Link : "a";
                 return (
-                  <div key={i} className="hover:bg-white/[0.02]" style={{ display: "grid", gridTemplateColumns: TABLE_COLS, alignItems: "center", gap: 14, padding: "clamp(14px,1.1vw,22px) clamp(16px,3vw,28px)", transition: "background .15s" }}>
+                  <div key={d.id != null ? d.id : i} data-flip-id={String(d.id != null ? d.id : d.name)} className="hover:bg-white/[0.02] flip-el" style={{ display: "grid", gridTemplateColumns: TABLE_COLS, alignItems: "center", gap: 14, padding: "clamp(14px,1.1vw,22px) clamp(16px,3vw,28px)", transition: "background .15s" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ ...VAL, fontWeight: 700, fontSize: "clamp(18px,1.2vw,24px)", color: rankColor }}>{rank}</span>
                     </div>

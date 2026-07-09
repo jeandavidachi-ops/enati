@@ -4,6 +4,8 @@ import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
 import { useApi, apiFetch, apiInvalidate } from '../lib/api.js'
+import useFlip from '../lib/useFlip.js'
+import { useLiveList, sortGroups, sortTickers, sortUsers, demoGroups, demoTickers, demoUsers } from '../lib/liveList.js'
 import ProfileContent from './ProfileContent.jsx'
 
 // ---- Helpers ----
@@ -155,7 +157,7 @@ function prefetchDetail(href) {
   if (href.startsWith("/group/")) apiFetch("/api/group/" + href.slice(7));
   else if (href.startsWith("/ticker/")) apiFetch("/api/token/" + href.slice(8));
 }
-function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, telegram, groupId }) {
+function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, telegram, groupId, flipId }) {
   const Tag = href ? Link : "article";
   const [joinBusy, setJoinBusy] = useState(false);
   // Ouvre le lien social sans declencher la navigation de la card (evite l'<a> imbrique).
@@ -177,7 +179,8 @@ function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, teleg
   };
   return (
     <Tag {...(href ? { to: href, onMouseEnter: () => prefetchDetail(href) } : {})}
-      className={"relative w-full block overflow-hidden rounded-[20px] elevate-card" + (href ? " cursor-pointer" : "")}
+      {...(flipId != null ? { "data-flip-id": String(flipId) } : {})}
+      className={"relative w-full block overflow-hidden rounded-[20px] elevate-card flip-el" + (href ? " cursor-pointer" : "")}
       style={{ padding: "16px 18px 15px 15px" }}>
       <div className="relative flex gap-4">
         <BlocksThumb src={image} g={g} e={e} />
@@ -276,6 +279,11 @@ function LbMedal({ rank }) {
 }
 const LeaderboardSidebar = React.memo(function LeaderboardSidebar({ collapsed, onToggle, rows = [], tokens = [], onSelectUser, myPhoto }) {
   const [tab, setTab] = useState("leaderboard");
+  // FLIP : reclassement anime des lignes (onglet Leaderboard et onglet Tokens).
+  const lbRowsRef = useRef(null);
+  const tkRowsRef = useRef(null);
+  useFlip(lbRowsRef, rows.map((r) => (r.id != null ? r.id : r.name)));
+  useFlip(tkRowsRef, tokens.map((t) => t.addr || t.sym));
   if (collapsed) {
     return (
       <div className="lb-rail">
@@ -320,9 +328,9 @@ const LeaderboardSidebar = React.memo(function LeaderboardSidebar({ collapsed, o
             </div>
           </div>
           <div className="dash"></div>
-          <div className="rows">
+          <div className="rows" ref={lbRowsRef}>
             {rows.map((row, i) => (
-              <div className="row" key={row.id != null ? row.id : i}
+              <div className="row flip-el" key={row.id != null ? row.id : i} data-flip-id={String(row.id != null ? row.id : row.name)}
                 onClick={() => row.id != null && onSelectUser && onSelectUser(row.id)}
                 onMouseEnter={() => row.id != null && apiFetch("/api/user/" + row.id + "/profile")}
                 style={{ cursor: row.id != null ? 'pointer' : 'default' }}>
@@ -343,11 +351,12 @@ const LeaderboardSidebar = React.memo(function LeaderboardSidebar({ collapsed, o
             <button>30D</button>
             <button className="selected">ALL</button>
           </div>
-          <div className="rows">
+          <div className="rows" ref={tkRowsRef}>
             {tokens.map((t, i) => {
               const RowTag = t.addr ? Link : "a";
+              const fid = t.addr || t.sym;
               return (
-              <RowTag className="row" key={i} {...(t.addr ? { to: "/ticker/" + encodeURIComponent(t.addr), onMouseEnter: () => apiFetch("/api/token/" + encodeURIComponent(t.addr)) } : { href: "#" })}>
+              <RowTag className="row flip-el" key={fid} data-flip-id={String(fid)} {...(t.addr ? { to: "/ticker/" + encodeURIComponent(t.addr), onMouseEnter: () => apiFetch("/api/token/" + encodeURIComponent(t.addr)) } : { href: "#" })}>
                 <LbMedal rank={String(i + 1)} />
                 <Avatar src={t.img} g={t.g} e={t.e} className="avatar" />
                 <div className="user"><strong>{t.sym}</strong></div>
@@ -438,13 +447,14 @@ export default function Versus() {
   // Donnees depuis le cache (rendu instantane si prechargees au demarrage).
   const myUser = useApi("/api/auth/me")?.user;
   const myPhoto = myUser?.telegram?.id ? "/api/user-photo/" + myUser.telegram.id : null;
-  const groupsStats = useApi("/api/all-groups-stats");
+  // useLiveList = polling reel (~8s) + mode demo ?reorder-demo=1 pour le reclassement.
+  const groupsStats = useLiveList("/api/all-groups-stats", { demoMutate: demoGroups });
   const sharedRes = useApi("/api/shared-contracts");
-  const latestRes = useApi("/api/latest-records");
-  const callersRes = useApi("/api/all-callers");
+  const latestRes = useLiveList("/api/latest-records", { demoMutate: demoTickers });
+  const callersRes = useLiveList("/api/all-callers", { demoMutate: demoUsers });
 
-  // Leaderboard "users" du menu de gauche : auteurs de calls (tous groupes).
-  const lbUsers = useMemo(() => (callersRes?.data || []).map((c) => ({
+  // Leaderboard "users" du menu de gauche : auteurs de calls (tous groupes), tries Win desc.
+  const lbUsers = useMemo(() => (callersRes?.data || []).slice().sort(sortUsers).map((c) => ({
     id: c.caller_id,
     name: c.username ? "@" + c.username : (c.name || "Unknown"),
     img: c.caller_id != null ? ("/api/user-photo/" + c.caller_id) : null,
@@ -461,8 +471,8 @@ export default function Versus() {
     return map;
   }, [sharedRes]);
 
-  // Groupes : strip du haut + Popular Groups (12 premiers)
-  const groups = useMemo(() => (groupsStats?.data || []).slice(0, 12).map((g, i) => ({
+  // Groupes : strip du haut + Popular Groups (12 premiers), tries Win Rate desc.
+  const groups = useMemo(() => (groupsStats?.data || []).slice().sort(sortGroups).slice(0, 12).map((g, i) => ({
     id: g.group_id,
     name: g.group_name || "Unknown",
     win: Math.round(g.win_rate || 0),
@@ -478,8 +488,8 @@ export default function Versus() {
     if (lbTopRef.current) setLbTop(lbTopRef.current.offsetHeight);
   }, [groups]);
 
-  // Derniers coins (Popular Tickers) + leur image (mise en cache)
-  const tickers = useMemo(() => (latestRes?.data || []).slice(0, 12).map((c, i) => {
+  // Derniers coins (Popular Tickers) + leur image (mise en cache), tries Multiplier desc.
+  const tickers = useMemo(() => (latestRes?.data || []).slice().sort(sortTickers).slice(0, 12).map((c, i) => {
     const im = tokenImgs[c.contract_address] || {};
     return {
       sym: c.coin_name || "?",
@@ -507,6 +517,12 @@ export default function Versus() {
       }).catch(() => {});
     });
   }, [latestRes]);
+
+  // FLIP : reclassement anime des deux grilles (Popular Groups / Popular Tickers).
+  const groupsGridRef = useRef(null);
+  const tickersGridRef = useRef(null);
+  useFlip(groupsGridRef, groups.map((d) => d.id));
+  useFlip(tickersGridRef, tickers.map((d) => d.addr || d.sym));
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
@@ -564,9 +580,9 @@ export default function Versus() {
               </div>
               <TimeTabs value={groupTime} onChange={setGroupTime} />
             </div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-5">
-              {groups.map((d, i) => (
-                <BlocksCard key={i} image={d.img} name={d.name} g={d.g} e={d.e} time={groupTime} join groupId={d.id}
+            <div ref={groupsGridRef} className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-5">
+              {groups.map((d) => (
+                <BlocksCard key={d.id} flipId={d.id} image={d.img} name={d.name} g={d.g} e={d.e} time={groupTime} join groupId={d.id}
                   href={d.id ? ("/group/" + d.id) : null}
                   stats={[
                     { label: "PnL", value: d.win + "%", positive: true },
@@ -589,9 +605,9 @@ export default function Versus() {
               </div>
               <TimeTabs value={tickerTime} onChange={setTickerTime} />
             </div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-5">
+            <div ref={tickersGridRef} className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-5">
               {tickers.map((d, i) => (
-                <BlocksCard key={i} image={d.img} name={d.sym} g={d.g} e={d.e} time={tickerTime}
+                <BlocksCard key={d.addr || (d.sym + i)} flipId={d.addr || (d.sym + i)} image={d.img} name={d.sym} g={d.g} e={d.e} time={tickerTime}
                   twitter={d.twitter} telegram={d.telegram}
                   href={d.addr ? ("/ticker/" + encodeURIComponent(d.addr)) : null}
                   stats={[

@@ -14,6 +14,16 @@
   .rtj-btn:hover svg{transform:translateX(5px);animation:none}
   .rtj-btn:active{transform:translateY(0);box-shadow:0 4px 14px -10px rgba(255,255,255,0.3)}
 
+  /* ---- Card Reorder (FLIP) : flash montee/descente (repris du prototype) ---- */
+  .flip-el{position:relative;transition:border-color .5s ease}
+  .flip-el.is-rising{border-color:#1f5c3a}
+  .flip-el.is-falling{border-color:#5c2420}
+  .flip-el::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent;border-radius:8px 0 0 8px;transition:background .4s ease;pointer-events:none;z-index:3}
+  .flip-el.is-rising::before{background:#00e676}
+  .flip-el.is-falling::before{background:#ff3b24}
+  .flip-el.is-rising::after{content:"\25B2";position:absolute;top:8px;right:10px;color:#00e676;font-size:11px;font-weight:700;pointer-events:none;z-index:3}
+  .flip-el.is-falling::after{content:"\25BC";position:absolute;top:8px;right:10px;color:#ff3b24;font-size:11px;font-weight:700;pointer-events:none;z-index:3}
+
   /* ---- Card hover "Elevate Combo" (repris de new/elevate-combo-2s.css) ---- */
   .elevate-card{background:#101314;border:1px solid #253036;transition:transform .22s ease,background .2s ease,border-color .2s ease}
   .elevate-card:hover{background:#181d1e;border-color:#3d4b52;transform:translateY(-4px)}
