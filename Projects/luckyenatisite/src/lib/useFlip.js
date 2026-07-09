@@ -13,6 +13,7 @@ export default function useFlip(containerRef, orderedIds) {
   const prevRects = useRef(new Map())   // id -> DOMRect precedent
   const prevIndex = useRef(new Map())   // id -> index de rang precedent
   const prevIds = useRef(null)          // Set des ids du passage precedent
+  const prevWidth = useRef(null)        // largeur du conteneur au passage precedent
   const flashTimers = useRef(new Map()) // id -> timeout de nettoyage de classe
 
   const reduce = typeof window !== 'undefined' &&
@@ -41,14 +42,22 @@ export default function useFlip(containerRef, orderedIds) {
     const prev = prevIds.current
     const sameSet = prev && prev.size === curIds.size &&
       Array.from(curIds).every((id) => prev.has(id))
+    // Garde zoom/resize : le CSS `zoom` (useGlobalZoom, applique APRES le 1er paint)
+    // et les resizes changent l'echelle de getBoundingClientRect -> toutes les
+    // positions relatives changent sans reclassement. La largeur mesuree du conteneur
+    // change dans ces cas-la (jamais lors d'un simple reorder) -> on skip l'anim.
+    const sameWidth = prevWidth.current != null && Math.abs(prevWidth.current - base.width) < 0.5
+    const canAnimate = sameSet && sameWidth && !reduce
 
     els.forEach((el) => {
       const id = el.getAttribute('data-flip-id')
       const r = el.getBoundingClientRect()
-      const rect = { left: r.left - base.left, top: r.top - base.top }
+      // + scrollTop/Left : immunise contre le scroll interne du conteneur (ex. .rows
+      // de la sidebar) qui deplace les enfants sans reclassement.
+      const rect = { left: r.left - base.left + container.scrollLeft, top: r.top - base.top + container.scrollTop }
       const prevRect = prevRects.current.get(id)
 
-      if (sameSet && prevRect && !reduce) {
+      if (canAnimate && prevRect) {
         const dx = prevRect.left - rect.left
         const dy = prevRect.top - rect.top
         if (dx || dy) {
@@ -86,9 +95,10 @@ export default function useFlip(containerRef, orderedIds) {
       prevRects.current.set(id, rect)
     })
 
-    // Memorise les index de rang + l'ensemble des ids pour le prochain passage.
+    // Memorise index de rang, ensemble des ids et largeur pour le prochain passage.
     prevIndex.current = curIndex
     prevIds.current = curIds
+    prevWidth.current = base.width
 
     // Purge les ids disparus.
     const alive = new Set(Array.from(els).map((el) => el.getAttribute('data-flip-id')))
