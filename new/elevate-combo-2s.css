@@ -1,0 +1,16 @@
+/* VERSUS card hover — "Elevate Combo" (2s)
+   Lift + fill lighten + border brighten, together.
+   No glow, no shadow, on-system tokens. */
+
+.group-card {
+  background: #101314;
+  border: 1px solid #253036;
+  border-radius: 8px;
+  transition: transform .22s ease, background .2s ease, border-color .2s ease;
+}
+
+.group-card:hover {
+  background: #181d1e;
+  border-color: #3d4b52;
+  transform: translateY(-4px);
+}

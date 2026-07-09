@@ -83,13 +83,8 @@ function BlocksCard({ image, name, stats, g, e, href, time, join, twitter, teleg
   };
   return (
     <Tag {...(href ? { to: href, onMouseEnter: () => prefetchDetail(href) } : {})}
-      className={"relative w-full block overflow-hidden rounded-[20px]" + (href ? " cursor-pointer transition-colors hover:border-white/30" : "")}
-      style={{
-        padding: "16px 18px 15px 15px",
-        background: "radial-gradient(ellipse at 49% -20%, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.012) 34%, transparent 58%), #0b0b0c",
-        border: "1.5px solid rgba(154,160,171,0.38)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -22px 46px rgba(255,255,255,0.02)"
-      }}>
+      className={"relative w-full block overflow-hidden rounded-[20px] elevate-card" + (href ? " cursor-pointer" : "")}
+      style={{ padding: "16px 18px 15px 15px" }}>
       <div className="relative flex gap-4">
         <BlocksThumb src={image} g={g} e={e} />
         <div className="flex-1 min-w-0 flex flex-col">

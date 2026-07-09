@@ -14,6 +14,10 @@
   .rtj-btn:hover svg{transform:translateX(5px);animation:none}
   .rtj-btn:active{transform:translateY(0);box-shadow:0 4px 14px -10px rgba(255,255,255,0.3)}
 
+  /* ---- Card hover "Elevate Combo" (repris de new/elevate-combo-2s.css) ---- */
+  .elevate-card{background:#101314;border:1px solid #253036;transition:transform .22s ease,background .2s ease,border-color .2s ease}
+  .elevate-card:hover{background:#181d1e;border-color:#3d4b52;transform:translateY(-4px)}
+
   /* ---- Leaderboard sidebar (porte de new/versus-leaderboard-clean) ---- */
   .lb-fixed{position:fixed;left:0;bottom:0;z-index:40}
   .lb-side{--lb-green:#00f078;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#f3f4f6;height:100%}
