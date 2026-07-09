@@ -63,26 +63,26 @@ import useTelegramConnect from './shared/useTelegramConnect.js'
   .vs-tg-btn:hover{transform:translateY(-1px);box-shadow:0 12px 28px -8px rgba(42,171,238,.85)}
   .vs-tg-btn svg{width:16px;height:16px}
   @keyframes vs-rc-arrow{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
-  .vs-rc-btn{display:inline-flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;
+  .vs-rc-btn{display:inline-flex;align-items:center;gap:15px;padding:15px 18px;border-radius:22px;
     border:1.5px solid rgba(255,255,255,.38);color:#fff;cursor:pointer;font-family:'Inter',system-ui,sans-serif;
     background:radial-gradient(circle at left,rgba(255,255,255,.08),transparent 40%),linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015));
     box-shadow:0 0 22px rgba(255,255,255,.08),inset 0 0 22px rgba(255,255,255,.02);
     transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
   .vs-rc-btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.75);box-shadow:0 0 30px rgba(255,255,255,.16),inset 0 0 26px rgba(255,255,255,.035)}
   .vs-rc-btn:active{transform:translateY(0) scale(.99)}
-  .vs-rc-avatar{width:42px;height:42px;flex:0 0 42px;border-radius:50%;position:relative;overflow:hidden;
+  .vs-rc-avatar{width:52px;height:52px;flex:0 0 52px;border-radius:50%;position:relative;overflow:hidden;
     background:radial-gradient(circle at center,#1d3e91,#071024 75%);border:2px solid rgba(255,255,255,.85);box-shadow:0 0 10px rgba(255,255,255,.25)}
-  .vs-rc-avatar .h{position:absolute;top:8px;left:10px;width:22px;height:17px;background:linear-gradient(#3d6cff,#1944cc);border-radius:6px 6px 2px 2px}
-  .vs-rc-avatar .b{position:absolute;bottom:-6px;left:11px;width:25px;height:25px;background:#d8bd8f;border-radius:50%}
-  .vs-rc-name{font-size:17px;font-weight:900;line-height:1;letter-spacing:-.5px;max-width:160px;margin-bottom:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .vs-rc-stats{display:flex;align-items:center;gap:11px}
+  .vs-rc-avatar .h{position:absolute;top:10px;left:12px;width:27px;height:21px;background:linear-gradient(#3d6cff,#1944cc);border-radius:7px 7px 2px 2px}
+  .vs-rc-avatar .b{position:absolute;bottom:-7px;left:14px;width:31px;height:31px;background:#d8bd8f;border-radius:50%}
+  .vs-rc-name{font-size:21px;font-weight:900;line-height:1;letter-spacing:-.5px;max-width:200px;margin-bottom:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vs-rc-stats{display:flex;align-items:center;gap:14px}
   .vs-rc-stat{display:flex;flex-direction:column;align-items:flex-start}
-  .vs-rc-stat strong{display:block;font-size:13px;line-height:.9;font-weight:900}
-  .vs-rc-stat p{margin:3px 0 0;color:rgba(255,255,255,.55);font-size:7px;font-weight:800;line-height:1}
-  .vs-rc-stats .vs-rc-line{width:1px;height:19px;background:rgba(255,255,255,.18)}
+  .vs-rc-stat strong{display:block;font-size:16px;line-height:.9;font-weight:900}
+  .vs-rc-stat p{margin:4px 0 0;color:rgba(255,255,255,.55);font-size:9px;font-weight:800;line-height:1}
+  .vs-rc-stats .vs-rc-line{width:1px;height:24px;background:rgba(255,255,255,.18)}
   .vs-rc-blue{color:#4ea1ff}.vs-rc-green{color:#37e44f}.vs-rc-red{color:#ff4f72}
-  .vs-rc-arrow{width:24px;height:24px;flex:0 0 24px;border-radius:50%;display:grid;place-items:center;
-    border:1.5px solid rgba(255,255,255,.45);color:#fff;font-size:14px;line-height:1;box-shadow:inset 0 0 10px rgba(255,255,255,.04);animation:vs-rc-arrow 2.6s ease-in-out infinite}
+  .vs-rc-arrow{width:30px;height:30px;flex:0 0 30px;border-radius:50%;display:grid;place-items:center;
+    border:1.5px solid rgba(255,255,255,.45);color:#fff;font-size:17px;line-height:1;box-shadow:inset 0 0 10px rgba(255,255,255,.04);animation:vs-rc-arrow 2.6s ease-in-out infinite}
   .vs-rc-btn:hover .vs-rc-arrow{animation:none;transform:translateX(2px)}
   .vs-am-wrap{position:relative;display:inline-block}
   .vs-am-menu{position:absolute;top:100%;right:0;margin-top:8px;width:100%;min-width:250px;z-index:90;
