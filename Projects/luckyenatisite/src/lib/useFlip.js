@@ -22,6 +22,12 @@ export default function useFlip(containerRef, orderedIds) {
     const container = containerRef.current
     if (!container) return
     const els = container.querySelectorAll('[data-flip-id]')
+    // Reference: positions RELATIVES au conteneur (pas au viewport). Sinon un simple
+    // decalage de la page au-dessus de la liste (header sticky qui se mesure, bande du
+    // haut qui se remplit, polices/images qui chargent) donne le meme dy a toutes les
+    // cards -> elles glissent toutes ensemble au chargement. En relatif, seul un vrai
+    // reclassement change les positions.
+    const base = container.getBoundingClientRect()
 
     // Index de rang courant (position dans orderedIds).
     const curIndex = new Map()
@@ -38,7 +44,8 @@ export default function useFlip(containerRef, orderedIds) {
 
     els.forEach((el) => {
       const id = el.getAttribute('data-flip-id')
-      const rect = el.getBoundingClientRect()
+      const r = el.getBoundingClientRect()
+      const rect = { left: r.left - base.left, top: r.top - base.top }
       const prevRect = prevRects.current.get(id)
 
       if (sameSet && prevRect && !reduce) {
