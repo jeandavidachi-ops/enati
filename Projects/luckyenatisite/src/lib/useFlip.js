@@ -12,6 +12,7 @@ import { useLayoutEffect, useRef } from 'react'
 export default function useFlip(containerRef, orderedIds) {
   const prevRects = useRef(new Map())   // id -> DOMRect precedent
   const prevIndex = useRef(new Map())   // id -> index de rang precedent
+  const prevIds = useRef(null)          // Set des ids du passage precedent
   const flashTimers = useRef(new Map()) // id -> timeout de nettoyage de classe
 
   const reduce = typeof window !== 'undefined' &&
@@ -26,14 +27,23 @@ export default function useFlip(containerRef, orderedIds) {
     const curIndex = new Map()
     ;(orderedIds || []).forEach((id, i) => curIndex.set(String(id), i))
 
+    // Ensemble des ids presents ce passage.
+    const curIds = new Set(Array.from(els).map((el) => el.getAttribute('data-flip-id')))
+    // On n'anime QUE si l'ensemble des items est identique au passage precedent
+    // (= vrai reclassement). Au 1er passage / peuplement / pagination, on ne fait
+    // que memoriser les positions, sans transform ni flash (evite le glitch d'apparition).
+    const prev = prevIds.current
+    const sameSet = prev && prev.size === curIds.size &&
+      Array.from(curIds).every((id) => prev.has(id))
+
     els.forEach((el) => {
       const id = el.getAttribute('data-flip-id')
       const rect = el.getBoundingClientRect()
-      const prev = prevRects.current.get(id)
+      const prevRect = prevRects.current.get(id)
 
-      if (prev && !reduce) {
-        const dx = prev.left - rect.left
-        const dy = prev.top - rect.top
+      if (sameSet && prevRect && !reduce) {
+        const dx = prevRect.left - rect.left
+        const dy = prevRect.top - rect.top
         if (dx || dy) {
           // FLIP : on part de l'ancienne position...
           el.style.transition = 'none'
@@ -42,6 +52,9 @@ export default function useFlip(containerRef, orderedIds) {
           requestAnimationFrame(() => {
             el.style.transition = 'transform .6s cubic-bezier(.34,1.2,.4,1)'
             el.style.transform = ''
+            // Nettoie les styles inline apres l'anim pour ne pas ralentir le hover
+            // .elevate-card (qui utilise aussi transform).
+            setTimeout(() => { el.style.transition = ''; el.style.transform = '' }, 640)
           })
 
           // Flash selon le changement de rang (plus juste que dy en grille).
@@ -66,8 +79,9 @@ export default function useFlip(containerRef, orderedIds) {
       prevRects.current.set(id, rect)
     })
 
-    // Memorise les index de rang pour le prochain passage.
+    // Memorise les index de rang + l'ensemble des ids pour le prochain passage.
     prevIndex.current = curIndex
+    prevIds.current = curIds
 
     // Purge les ids disparus.
     const alive = new Set(Array.from(els).map((el) => el.getAttribute('data-flip-id')))
