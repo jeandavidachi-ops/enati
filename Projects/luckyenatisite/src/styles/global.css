@@ -58,7 +58,8 @@
   .lb-side .rows::-webkit-scrollbar-thumb{background:#2a2c33;border-radius:6px}
   .lb-side .rows::-webkit-scrollbar-thumb:hover{background:#3a3d46}
   .lb-side .rows{scrollbar-width:thin;scrollbar-color:#2a2c33 transparent}
-  .lb-side .row{height:48px;display:grid;grid-template-columns:34px 40px 1fr auto;align-items:center;column-gap:8px;border-bottom:1px solid rgba(255,255,255,.045)}
+  .lb-side .row{height:48px;display:grid;grid-template-columns:34px 40px 1fr auto;align-items:center;column-gap:8px;border-bottom:1px solid rgba(255,255,255,.045);transition:transform .2s ease,background .2s ease,border-radius .2s ease}
+  .lb-side .row:hover{background:#181d1e;transform:translateY(-2px);border-radius:8px}
   .lb-side .place{width:30px;text-align:center;color:#c5c7d1;font-size:13px;font-weight:500}
   .lb-side .medal{width:18px;height:22px;margin:0 auto;position:relative;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#151515}
   .lb-side .medal:before{content:"";width:18px;height:18px;border-radius:50%;position:absolute;top:0;left:0;background:var(--m,#f4b92f)}
