@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useApi, apiFetch, apiInvalidate } from './api.js'
 
-// Active le mode demo si l'URL contient ?reorder-demo=1 (perturbe les metriques
-// cote client pour VOIR l'animation de reclassement meme si la data est figee).
+// Active le mode demo si l'URL contient ?test (perturbe les metriques cote client
+// pour VOIR l'animation de reclassement meme si la data est figee).
 export function isReorderDemo() {
   if (typeof window === 'undefined') return false
-  return new URLSearchParams(window.location.search).get('reorder-demo') === '1'
+  return new URLSearchParams(window.location.search).has('test')
 }
 
 // Refetch reseau en contournant le cache fige de lib/api.js.
