@@ -46,10 +46,10 @@ async def on_bot_promoted(event: ChatMemberUpdated):
     text = (
         "⚔️ *Welcome to Versus!*\n\n"
         "To join the Versus waitlist, this group needs a valid *invitation code* "
-        "received from an already-registered guild.\n\n"
+        "received from an already-registered group.\n\n"
         "👉 Send it here with:\n`/code YOUR_INVITATION_CODE`\n\n"
         "Once it's valid, you'll instantly get your own one-time *referral code* "
-        "to invite the next guild."
+        "to invite the next group."
     )
     try:
         await bot.send_message(group_id, text, parse_mode='Markdown')
@@ -90,7 +90,7 @@ async def cmd_invitation_code(message: Message, command: CommandObject = None):
         await message.reply(
             "✅ *Registered!* This group is now on the Versus waitlist.\n\n"
             f"🎟️ *Your referral code:* `{referral}`\n"
-            "Share it with the next guild you invite — it can only be redeemed once.\n\n"
+            "Share it with the next group you invite — it can only be redeemed once.\n\n"
             f"👉 {SITE_URL}",
             parse_mode='Markdown')
     else:  # invalid
