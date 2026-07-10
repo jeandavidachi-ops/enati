@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect, useLayoutEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useApi } from '../lib/api.js'
 import SoundControl from '../components/SoundControl.jsx'
 
@@ -11,7 +11,6 @@ import SoundControl from '../components/SoundControl.jsx'
 //  GET /api/versus/registered-groups (sieges de l'Arena).
 // =====================================================================
 
-const LOGO = '/images/versus.png'
 
 // ---------- Geometrie de l'amphitheatre (reprise du modele) ----------
 const RE = 104, GAP = 49, ASPECT_X = 1.34
@@ -265,12 +264,9 @@ export default function Portal() {
       {/* Contenu */}
       <div style={{ position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 24px 56px' }}>
 
-        {/* HUD header */}
+        {/* HUD header : wordmark VERSUS (style header /home) a gauche */}
         <div style={{ width: '100%', maxWidth: 680, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 30 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src={LOGO} alt="Versus" style={{ width: 28, height: 28, borderRadius: 7, objectFit: 'cover', display: 'block' }} />
-            <span style={{ color: '#ffffff', fontWeight: 700, fontSize: 17, letterSpacing: '-0.2px' }}>Versus</span>
-          </div>
+          <Link to="/home" style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontStyle: 'italic', fontWeight: 600, fontSize: 24, letterSpacing: '0.15em', color: '#d4d4d8', textDecoration: 'none', userSelect: 'none' }}>VERSUS</Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 999, background: 'rgba(255,255,255,0.02)', animation: 'vs-badge 3s ease-in-out infinite' }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ffffff' }} />
             <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: 2, color: '#C7CCD4', textTransform: 'uppercase' }}>Wait List</span>
@@ -353,11 +349,7 @@ export default function Portal() {
         </div>
 
         {/* ===== Versus Registered Arena (juste en dessous) ===== */}
-        <div style={{ width: '100%', maxWidth: 1160, display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '56px 0 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src={LOGO} alt="Versus" style={{ width: 28, height: 28, borderRadius: 7, objectFit: 'cover', display: 'block' }} />
-            <span style={{ color: '#ffffff', fontWeight: 700, fontSize: 17, letterSpacing: '-0.2px' }}>Versus</span>
-          </div>
+        <div style={{ width: '100%', maxWidth: 1160, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', margin: '56px 0 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 999, background: 'rgba(255,255,255,0.02)' }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ffffff' }} />
             <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: 2, color: '#C7CCD4', textTransform: 'uppercase' }}>The Arena</span>
