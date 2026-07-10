@@ -90,7 +90,7 @@ async def cmd_invitation_code(message: Message, command: CommandObject = None):
         await message.reply(
             "✅ *Registered!* This group is now on the Versus waitlist.\n\n"
             f"🎟️ *Your referral code:* `{referral}`\n"
-            "Share it with the next group you invite — it can only be redeemed once.\n\n"
+            "Share it with every group you invite — it can be reused as many times as you like.\n\n"
             f"👉 {SITE_URL}",
             parse_mode='Markdown')
     else:  # invalid

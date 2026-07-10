@@ -54,7 +54,8 @@ def redeem_invitation_code(group_id, group_name, entered, group_photo=None):
 
     Un code valide est SOIT un code admin (collection invitation_codes, champ 'code',
     non consomme ; les codes admin restent reutilisables sauf flag 'single_use'), SOIT
-    le referral_code (non encore utilise) d'un autre groupe deja inscrit."""
+    le referral_code d'un autre groupe deja inscrit. Les referrals sont reutilisables
+    a volonte (aucune limite d'usage)."""
     entered = (entered or '').strip()
     if not entered:
         return 'invalid', None
@@ -77,28 +78,21 @@ def redeem_invitation_code(group_id, group_name, entered, group_photo=None):
                 {'$set': {'consumed': True, 'consumed_by': group_id, 'consumed_at': now}},
             )
     else:
-        # 2) Referral d'un autre groupe deja inscrit, non encore utilise (usage unique).
-        ref = versus_waitlist.find_one(
-            {'referral_code': entered, 'referral_used': {'$ne': True}})
+        # 2) Referral d'un autre groupe deja inscrit (reutilisable a volonte).
+        ref = versus_waitlist.find_one({'referral_code': entered})
         if ref and ref.get('group_id') != group_id:
             valid = True
-            versus_waitlist.update_one(
-                {'_id': ref['_id']},
-                {'$set': {'referral_used': True, 'referral_used_by': group_id,
-                          'referral_used_at': now}},
-            )
 
     if not valid:
         return 'invalid', None
 
-    # Code valide -> inscription + referral propre au groupe (usage unique).
+    # Code valide -> inscription + generation du referral propre au groupe.
     new_referral = 'VS-' + secrets.token_hex(4).upper()
     versus_waitlist.update_one(
         {'group_id': group_id},
         {'$set': {'group_name': group_name, 'group_photo': group_photo,
                   'registered': True, 'registered_at': now,
-                  'referral_code': new_referral, 'referral_used': False,
-                  'invited_by': entered},
+                  'referral_code': new_referral, 'invited_by': entered},
          '$setOnInsert': {'added_at': now}},
         upsert=True,
     )
