@@ -118,6 +118,11 @@ user_joined_groups = db['user_joined_groups']
 # /api/all-callers et /api/user/<id>/profile repondent instantanement sans agregation
 # live ni appel Telegram. Voir _rebuild_user_stats / _maybe_refresh_user_stats.
 user_stats = db['user_stats']
+# Meta Telegram par groupe (nb reel de membres + public/prive), PERSISTEE.
+# Rafraichie en tache de fond avec un gros TTL (voir _refresh_group_meta_once)
+# pour ne pas surcharger l'API Telegram. Lue par /api/all-groups-stats (jamais
+# d'appel Telegram dans le chemin d'une requete). Un doc par group_id.
+group_meta = db['group_meta']
 try:
     user_stats.create_index([('calls', -1), ('total_stat', -1)])
 except Exception as _e:
@@ -934,6 +939,7 @@ def get_all_groups_stats():
                     'total_current_stat': {'$sum': '$current_stat'},
                     'max_current_stat': {'$max': '$current_stat'},
                     'created_at': {'$min': '$creation_time'},  # 1er call du groupe -> tri "New Groups"
+                    'last_activity': {'$max': '$creation_time'},  # dernier call -> filtre "Active Today"
                     'total_members': {'$sum': 1}  # Количество записей в группе
                 }
             },
@@ -965,10 +971,16 @@ def get_all_groups_stats():
         
         # Выполняем агрегацию
         groups_stats = list(users_collection.aggregate(pipeline))
-        
+
+        # Meta Telegram (nb reel de membres + public/prive) : LECTURE seule depuis
+        # group_meta (aucun appel Telegram ici). Rafraichissement de fond throttle.
+        meta_map = _group_meta_map()
+        _maybe_refresh_group_meta()
+
         # Форматируем результат
         formatted_stats = []
         for group in groups_stats:
+            gm = meta_map.get(group['_id'], {})
             formatted_group = {
                 'group_id': group['_id'],
                 'group_name': group['group_name'],
@@ -980,10 +992,13 @@ def get_all_groups_stats():
                 'score': group.get('score', 0),
                 'total_members': group['total_members'],
                 'created_at': group.get('created_at'),
+                'last_activity': group.get('last_activity'),
+                'member_count': gm.get('member_count'),
+                'is_public': gm.get('is_public'),
                 'win_rate': round(group['win_rate'], 2)  # Округляем до 2 знаков после запятой
             }
             formatted_stats.append(formatted_group)
-        
+
         return {
             'success': True,
             'data': formatted_stats,
@@ -1072,6 +1087,22 @@ def _tg_member_count(group_id):
         logger.warning(f"getChatMemberCount failed for {group_id}: {e}")
     _member_count_cache[group_id] = (count, time.time())
     return count
+
+
+def _tg_group_is_public(group_id):
+    """True si le groupe est public (getChat.username present), False si prive,
+    None si indeterminable (bot absent, pas de token, erreur)."""
+    if not BOT_TOKEN:
+        return None
+    try:
+        chat = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/getChat',
+                            params={'chat_id': group_id}, timeout=8).json()
+        if not chat.get('ok'):
+            return None
+        return bool((chat.get('result') or {}).get('username'))
+    except requests.RequestException as e:
+        logger.warning(f"getChat (is_public) failed for {group_id}: {e}")
+        return None
 
 
 def _tg_join_link(group_id):
@@ -1636,6 +1667,71 @@ def _maybe_refresh_user_stats():
             return
         _user_stats_building = True
     threading.Thread(target=_rebuild_user_stats, daemon=True).start()
+
+
+# =====================================================================
+#  Meta Telegram par groupe (nb reel de membres + public/prive), persistee en
+#  base (collection group_meta). Rafraichie en tache de fond avec un GROS timer
+#  et throttlee -> ne surcharge jamais l'API Telegram, et /api/all-groups-stats
+#  ne fait que LIRE Mongo (aucun appel Telegram dans le chemin d'une requete).
+# =====================================================================
+GROUP_META_TTL = 12 * 3600          # 12h : au-dela, on rafraichit un groupe en fond
+GROUP_META_BATCH = 8                # nb max de groupes rafraichis par passage de fond
+GROUP_META_SLEEP = 0.4              # pause entre 2 groupes (throttle Telegram)
+_group_meta_lock = threading.Lock()
+_group_meta_building = False
+
+
+def _refresh_group_meta_once():
+    """Rafraichit la meta Telegram (member_count, is_public) des groupes dont le
+    doc group_meta est absent ou perime (> GROUP_META_TTL). Throttle : un petit
+    lot par passage, avec pause entre chaque groupe. Upsert dans group_meta."""
+    global _group_meta_building
+    try:
+        if not BOT_TOKEN:
+            return
+        now = time.time()
+        # group_id connus = ceux presents dans les stats (bot present dans le groupe).
+        known_ids = [g.get('group_id') for g in get_all_groups_stats().get('data', [])
+                     if g.get('group_id') is not None]
+        fresh = {d['_id'] for d in group_meta.find(
+            {'updated_at': {'$gte': now - GROUP_META_TTL}}, {'_id': 1})}
+        stale = [gid for gid in known_ids if gid not in fresh]
+        for gid in stale[:GROUP_META_BATCH]:
+            member_count = _tg_member_count(gid)
+            is_public = _tg_group_is_public(gid)
+            group_meta.update_one(
+                {'_id': gid},
+                {'$set': {'member_count': member_count, 'is_public': is_public,
+                          'updated_at': time.time()}},
+                upsert=True)
+            time.sleep(GROUP_META_SLEEP)
+        if stale:
+            logger.info(f"group_meta refreshed {min(len(stale), GROUP_META_BATCH)}/{len(stale)} stale groups")
+    except Exception as e:
+        logger.error(f"_refresh_group_meta_once failed: {e}")
+    finally:
+        with _group_meta_lock:
+            _group_meta_building = False
+
+
+def _maybe_refresh_group_meta():
+    """Lance un rafraichissement de fond si des groupes sont perimes. Non bloquant :
+    une seule passe a la fois (garde). Retourne immediatement."""
+    global _group_meta_building
+    with _group_meta_lock:
+        if _group_meta_building:
+            return
+        _group_meta_building = True
+    threading.Thread(target=_refresh_group_meta_once, daemon=True).start()
+
+
+def _group_meta_map():
+    """Charge toute la meta groupe en un seul read Mongo : gid -> {member_count, is_public}."""
+    out = {}
+    for d in group_meta.find({}, {'member_count': 1, 'is_public': 1}):
+        out[d['_id']] = {'member_count': d.get('member_count'), 'is_public': d.get('is_public')}
+    return out
 
 
 @app.route('/api/all-callers', methods=['GET'])

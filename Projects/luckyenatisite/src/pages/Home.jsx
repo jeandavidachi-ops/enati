@@ -5,9 +5,10 @@ import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
 import { useApi, apiFetch, apiInvalidate } from '../lib/api.js'
 import useFlip from '../lib/useFlip.js'
-import { useLiveList, sortUsers, groupComparator, tickerComparator, demoGroups, demoTickers, demoUsers } from '../lib/liveList.js'
+import { useLiveList, sortUsers, groupComparator, tickerComparator, applyGroupFilters, demoGroups, demoTickers, demoUsers } from '../lib/liveList.js'
 import ProfileContent from './ProfileContent.jsx'
 import FilterBar, { GROUP_CHIPS, TICKER_CHIPS } from '../components/shared/FilterBar.jsx'
+import GroupFiltersModal from '../components/shared/GroupFiltersModal.jsx'
 
 // ---- Helpers ----
 const GRADS = [
@@ -434,6 +435,8 @@ export default function Versus() {
   const [tickerTime, setTickerTime] = useState("12h");
   const [groupSort, setGroupSort] = useState("top-ranked");
   const [tickerSort, setTickerSort] = useState("most-scanned");
+  const [groupFilters, setGroupFilters] = useState(() => new Set());
+  const [groupFiltersOpen, setGroupFiltersOpen] = useState(false);
   const [lbCollapsed, setLbCollapsed] = useState(false);
   // Callbacks stables pour que LeaderboardSidebar (React.memo) ne se re-render pas
   // quand seul selectedUser change (le sidebar rend jusqu'a 100 lignes).
@@ -490,7 +493,7 @@ export default function Versus() {
   }, [sharedRes]);
 
   // Groupes : strip du haut + Popular Groups (12 premiers), tries Win Rate desc.
-  const groups = useMemo(() => (groupsStats?.data || []).slice().sort(groupComparator(groupSort)).slice(0, 12).map((g, i) => ({
+  const groups = useMemo(() => applyGroupFilters(groupsStats?.data || [], groupFilters, groupComparator(groupSort)).slice(0, 12).map((g, i) => ({
     id: g.group_id,
     name: g.group_name || "Unknown",
     win: Math.round(g.win_rate || 0),
@@ -499,7 +502,7 @@ export default function Versus() {
     calls: g.total_members || 0,
     img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
     g: gradOf(i), e: emojiOf(i),
-  })), [groupsStats, groupSort]);
+  })), [groupsStats, groupSort, groupFilters]);
 
   // Re-mesure quand la bande Groups se remplit (change sa hauteur)
   useEffect(() => {
@@ -598,7 +601,7 @@ export default function Versus() {
               </div>
               <TimeTabs value={groupTime} onChange={setGroupTime} />
             </div>
-            <FilterBar chips={GROUP_CHIPS} value={groupSort} onChange={setGroupSort} />
+            <FilterBar chips={GROUP_CHIPS} value={groupSort} onChange={setGroupSort} onFilters={() => setGroupFiltersOpen(true)} />
             <div ref={groupsGridRef} className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-5">
               {groups.map((d) => (
                 <BlocksCard key={d.id} flipId={d.id} image={d.img} name={d.name} g={d.g} e={d.e} time={groupTime} join groupId={d.id}
@@ -661,6 +664,8 @@ export default function Versus() {
         </footer>
         </div>
       </div>
+      <GroupFiltersModal open={groupFiltersOpen} onClose={() => setGroupFiltersOpen(false)}
+        value={groupFilters} onApply={setGroupFilters} />
     </div>
   );
 }

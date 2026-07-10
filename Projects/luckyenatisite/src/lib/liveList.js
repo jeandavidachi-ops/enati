@@ -86,6 +86,57 @@ export function groupComparator(key) {
   }
 }
 
+// ---- Boxe de filtres GROUPES (GroupFiltersModal) ----
+// selected = Set de keys. Applique un predicat de filtrage (visibilite / taille /
+// activite) PUIS un tri derive des options de tri cochees. Si aucune option de tri,
+// fallbackComparator est utilise (le tri courant du chip). Data reelle: is_public,
+// member_count (Telegram), last_activity.
+const GROUP_SORT_PRIORITY = ['most-active', 'most-members', 'fastest-growing', 'highest-win-rate', 'most-wins']
+
+export function applyGroupFilters(list, selected, fallbackComparator) {
+  const sel = selected instanceof Set ? selected : new Set(selected || [])
+  let out = (list || []).slice()
+
+  // --- Filtres qui restreignent ---
+  // Visibilite (OR interne). Un groupe is_public inconnu (null) est exclu si un
+  // filtre de visibilite est actif.
+  const wantPub = sel.has('public'), wantPriv = sel.has('private')
+  if (wantPub || wantPriv) {
+    out = out.filter((g) => (wantPub && g.is_public === true) || (wantPriv && g.is_public === false))
+  }
+  // Taille (OR interne). All Sizes = pas de contrainte.
+  const s0 = sel.has('size-0-100'), s1 = sel.has('size-100-1k')
+  if ((s0 || s1) && !sel.has('all-sizes')) {
+    out = out.filter((g) => {
+      const m = g.member_count
+      if (m == null) return false
+      return (s0 && m <= 100) || (s1 && m > 100 && m <= 1000)
+    })
+  }
+  // Active Today : dernier call dans les dernieres 24h.
+  if (sel.has('active-today')) {
+    const dayAgo = Date.now() - 24 * 3600 * 1000
+    out = out.filter((g) => parseTs(g.last_activity) >= dayAgo)
+  }
+
+  // --- Tri derive des options de tri cochees (1re par ordre de priorite) ---
+  const sortKey = GROUP_SORT_PRIORITY.find((k) => sel.has(k))
+  if (sortKey) out.sort(groupSortByOption(sortKey))
+  else if (fallbackComparator) out.sort(fallbackComparator)
+  return out
+}
+
+function groupSortByOption(key) {
+  switch (key) {
+    case 'most-members': return (a, b) => (b.member_count || 0) - (a.member_count || 0)
+    case 'fastest-growing': return (a, b) => (b.max_current_stat || 0) - (a.max_current_stat || 0)
+    case 'highest-win-rate': return (a, b) => (b.win_rate || 0) - (a.win_rate || 0)
+    case 'most-wins': return (a, b) => (b.total_wins || 0) - (a.total_wins || 0)
+    case 'most-active':
+    default: return (a, b) => (b.total_current_stat || 0) - (a.total_current_stat || 0)
+  }
+}
+
 // Comparateur tickers selon la cle du chip. sharedMap: addr(lower) -> groups_count.
 export function tickerComparator(key, sharedMap = {}) {
   const gc = (x) => sharedMap[String(x.contract_address || '').toLowerCase()] || 0

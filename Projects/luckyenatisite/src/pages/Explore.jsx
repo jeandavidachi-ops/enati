@@ -5,8 +5,9 @@ import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
 import { useApi, apiFetch, apiInvalidate } from '../lib/api.js'
 import useFlip from '../lib/useFlip.js'
-import { useLiveList, groupComparator, tickerComparator, demoGroups, demoTickers } from '../lib/liveList.js'
+import { useLiveList, groupComparator, tickerComparator, applyGroupFilters, demoGroups, demoTickers } from '../lib/liveList.js'
 import FilterBar, { GROUP_CHIPS, TICKER_CHIPS } from '../components/shared/FilterBar.jsx'
+import GroupFiltersModal from '../components/shared/GroupFiltersModal.jsx'
 
 // ---- Helpers ----
 const GRADS = [
@@ -176,6 +177,8 @@ export default function App({ type = "group" }) {
   const [page, setPage] = useState(1);
   const [tokenImgs, setTokenImgs] = useState({}); // addr -> { img, twitter, telegram }
   const [sort, setSort] = useState(TYPE === 'ticker' ? 'most-scanned' : 'top-ranked');
+  const [groupFilters, setGroupFilters] = useState(() => new Set());
+  const [groupFiltersOpen, setGroupFiltersOpen] = useState(false);
 
   // Donnees selon le type. useLiveList = polling reel (~8s) + mode demo ?reorder-demo=1.
   const groupsRes = useLiveList(TYPE === "group" ? "/api/all-groups-stats" : null, { demoMutate: demoGroups });
@@ -190,7 +193,7 @@ export default function App({ type = "group" }) {
 
   const items = useMemo(() => {
     if (TYPE === "group") {
-      return (groupsRes?.data || []).slice().sort(groupComparator(sort)).map((g, i) => ({
+      return applyGroupFilters(groupsRes?.data || [], groupFilters, groupComparator(sort)).map((g, i) => ({
         id: g.group_id,
         name: g.group_name || "Unknown",
         win: Math.round(g.win_rate || 0),
@@ -213,7 +216,7 @@ export default function App({ type = "group" }) {
         g: gradOf(i + 3), e: emojiOf(i + 5),
       };
     });
-  }, [TYPE, groupsRes, latestRes, tokenImgs, sort, sharedMap]);
+  }, [TYPE, groupsRes, latestRes, tokenImgs, sort, sharedMap, groupFilters]);
 
   // Retour a la page 1 + reset du tri par defaut quand on change de type (/group <-> /ticker)
   useEffect(() => { setPage(1); setSort(TYPE === 'ticker' ? 'most-scanned' : 'top-ranked'); }, [TYPE]);
@@ -281,7 +284,8 @@ export default function App({ type = "group" }) {
               <Link to="/" className="text-sm px-4 py-2 rounded-xl bg-zinc-900 ring-1 ring-white/10 text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">← Home</Link>
             </div>
 
-            <FilterBar chips={TYPE === "ticker" ? TICKER_CHIPS : GROUP_CHIPS} value={sort} onChange={setSort} />
+            <FilterBar chips={TYPE === "ticker" ? TICKER_CHIPS : GROUP_CHIPS} value={sort} onChange={setSort}
+              onFilters={TYPE === "group" ? () => setGroupFiltersOpen(true) : undefined} />
 
             <div ref={gridRef} className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-6">
               {TYPE === "group"
@@ -326,6 +330,10 @@ export default function App({ type = "group" }) {
           </div>
         </footer>
       </div>
+      {TYPE === "group" && (
+        <GroupFiltersModal open={groupFiltersOpen} onClose={() => setGroupFiltersOpen(false)}
+          value={groupFilters} onApply={setGroupFilters} />
+      )}
     </div>
   );
 }
