@@ -245,26 +245,19 @@ def auth_me():
 # =====================================================================
 @app.route('/api/versus/register', methods=['POST'])
 def versus_register():
-    """Valide un code d'invitation saisi sur la page racine. Si le code existe,
-    marque le groupe comme enregistre (invitation_codes + waitlist) et renvoie la
-    cible de redirection (/home). 404 si le code est inconnu."""
+    """Porte d'acces : valide un invitation code saisi sur la page racine et, si valide,
+    renvoie la cible de redirection (/home). Meme regle que le bot : le code est valide
+    s'il existe comme code admin (invitation_codes.code) OU comme referral d'un groupe
+    inscrit (versus_waitlist.referral_code). Codes reutilisables -> pas de mutation.
+    404 si le code est inconnu."""
     data = request.get_json(silent=True) or {}
     code = (data.get('code') or '').strip()
     if not code:
         return jsonify({'success': False, 'error': 'missing_code'}), 400
-    doc = invitation_codes.find_one({'code': code})
-    if not doc:
+    valid = (invitation_codes.find_one({'code': code}) is not None
+             or versus_waitlist.find_one({'referral_code': code}) is not None)
+    if not valid:
         return jsonify({'success': False, 'error': 'invalid_code'}), 404
-    now = time.time()
-    invitation_codes.update_one(
-        {'_id': doc['_id']},
-        {'$set': {'registered': True, 'registered_at': now}},
-    )
-    if doc.get('group_id') is not None:
-        versus_waitlist.update_one(
-            {'group_id': doc['group_id']},
-            {'$set': {'registered': True, 'registered_at': now}},
-        )
     return jsonify({'success': True, 'redirect': '/home'})
 
 
