@@ -33,39 +33,76 @@ try:
     invitation_codes.create_index('code', unique=True)
     invitation_codes.create_index('group_id', unique=True)
     versus_waitlist.create_index('group_id', unique=True)
+    versus_waitlist.create_index('referral_code', unique=True, sparse=True)
 except Exception as _e:
     print('versus onboarding index setup:', _e)
 
 
-def register_group_promotion(group_id, group_name, group_photo=None):
-    """Appele quand le bot devient admin d'un groupe. Genere (une seule fois par
-    groupe) un code d'invitation + un referral code, ajoute le groupe a la waitlist,
-    et renvoie (code, referral_code, already_existed). Idempotent : un groupe deja
-    connu renvoie ses codes existants sans creer de doublon ni rien re-generer."""
-    existing = invitation_codes.find_one({'group_id': group_id})
-    if existing:
-        return existing['code'], existing.get('referral_code'), True
+def group_is_registered(group_id):
+    """True si le groupe est deja inscrit sur la waitlist (a fourni un code valide)."""
+    doc = versus_waitlist.find_one({'group_id': group_id})
+    return bool(doc and doc.get('registered'))
 
-    code = secrets.token_urlsafe(6)
-    referral_code = secrets.token_hex(4)
+
+def redeem_invitation_code(group_id, group_name, entered, group_photo=None):
+    """Valide un invitation code saisi par un groupe (via le bot) et, si valide,
+    inscrit le groupe sur la waitlist + lui genere son propre referral code (usage
+    unique). Retourne (status, referral_code) :
+      - ('already', referral) : le groupe est deja inscrit
+      - ('invalid', None)     : le code ne correspond a rien de valide/disponible
+      - ('ok', new_referral)  : code valide -> groupe inscrit, referral genere
+
+    Un code valide est SOIT un code admin (collection invitation_codes, champ 'code',
+    non consomme ; les codes admin restent reutilisables sauf flag 'single_use'), SOIT
+    le referral_code (non encore utilise) d'un autre groupe deja inscrit."""
+    entered = (entered or '').strip()
+    if not entered:
+        return 'invalid', None
+
+    # Deja inscrit ? on rappelle simplement son referral.
+    existing = versus_waitlist.find_one({'group_id': group_id})
+    if existing and existing.get('registered'):
+        return 'already', existing.get('referral_code')
+
     now = time.time()
-    invitation_codes.insert_one({
-        'code': code,
-        'group_id': group_id,
-        'group_name': group_name,
-        'referral_code': referral_code,
-        'created_at': now,
-        'registered': False,
-        'registered_at': None,
-    })
+    valid = False
+
+    # 1) Code admin (seed) : reutilisable, sauf s'il porte single_use=True.
+    admin = invitation_codes.find_one({'code': entered})
+    if admin and not admin.get('consumed'):
+        valid = True
+        if admin.get('single_use'):
+            invitation_codes.update_one(
+                {'_id': admin['_id']},
+                {'$set': {'consumed': True, 'consumed_by': group_id, 'consumed_at': now}},
+            )
+    else:
+        # 2) Referral d'un autre groupe deja inscrit, non encore utilise (usage unique).
+        ref = versus_waitlist.find_one(
+            {'referral_code': entered, 'referral_used': {'$ne': True}})
+        if ref and ref.get('group_id') != group_id:
+            valid = True
+            versus_waitlist.update_one(
+                {'_id': ref['_id']},
+                {'$set': {'referral_used': True, 'referral_used_by': group_id,
+                          'referral_used_at': now}},
+            )
+
+    if not valid:
+        return 'invalid', None
+
+    # Code valide -> inscription + referral propre au groupe (usage unique).
+    new_referral = 'VS-' + secrets.token_hex(4).upper()
     versus_waitlist.update_one(
         {'group_id': group_id},
         {'$set': {'group_name': group_name, 'group_photo': group_photo,
-                  'registered': False},
+                  'registered': True, 'registered_at': now,
+                  'referral_code': new_referral, 'referral_used': False,
+                  'invited_by': entered},
          '$setOnInsert': {'added_at': now}},
         upsert=True,
     )
-    return code, referral_code, False
+    return 'ok', new_referral
 
 
 def store_token_image(address, image_url):
