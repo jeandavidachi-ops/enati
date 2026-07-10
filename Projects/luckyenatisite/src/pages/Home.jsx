@@ -5,10 +5,11 @@ import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
 import { useApi, apiFetch, apiInvalidate, localHistory } from '../lib/api.js'
 import useFlip from '../lib/useFlip.js'
-import { useLiveList, sortUsers, groupComparator, tickerComparator, applyGroupFilters, demoGroups, demoTickers, demoUsers } from '../lib/liveList.js'
+import { useLiveList, sortUsers, groupComparator, tickerComparator, applyGroupFilters, applyTickerFilters, EMPTY_TICKER_FILTERS, demoGroups, demoTickers, demoUsers } from '../lib/liveList.js'
 import ProfileContent from './ProfileContent.jsx'
 import FilterBar, { GROUP_CHIPS, TICKER_CHIPS } from '../components/shared/FilterBar.jsx'
 import GroupFiltersModal from '../components/shared/GroupFiltersModal.jsx'
+import TickerFiltersModal from '../components/shared/TickerFiltersModal.jsx'
 
 // ---- Helpers ----
 const GRADS = [
@@ -459,6 +460,8 @@ export default function Versus() {
   const [tickerSort, setTickerSort] = useState("most-scanned");
   const [groupFilters, setGroupFilters] = useState(() => new Set());
   const [groupFiltersOpen, setGroupFiltersOpen] = useState(false);
+  const [tickerFilters, setTickerFilters] = useState(EMPTY_TICKER_FILTERS);
+  const [tickerFiltersOpen, setTickerFiltersOpen] = useState(false);
   const [lbCollapsed, setLbCollapsed] = useState(false);
   // Callbacks stables pour que LeaderboardSidebar (React.memo) ne se re-render pas
   // quand seul selectedUser change (le sidebar rend jusqu'a 100 lignes).
@@ -557,7 +560,7 @@ export default function Versus() {
   }, [groups]);
 
   // Derniers coins (Popular Tickers) + leur image (mise en cache), tries Multiplier desc.
-  const tickers = useMemo(() => (latestRes?.data || []).slice().sort(tickerComparator(tickerSort, sharedMap)).slice(0, 12).map((c, i) => {
+  const tickers = useMemo(() => applyTickerFilters(latestRes?.data || [], tickerFilters, sharedMap, tickerComparator(tickerSort, sharedMap)).slice(0, 12).map((c, i) => {
     const im = tokenImgs[c.contract_address] || {};
     return {
       sym: c.coin_name || "?",
@@ -570,7 +573,7 @@ export default function Versus() {
       telegram: im.telegram || null,
       g: gradOf(i + 3), e: emojiOf(i + 5),
     };
-  }), [latestRes, tokenImgs, tickerSort, sharedMap]);
+  }), [latestRes, tokenImgs, tickerSort, sharedMap, tickerFilters]);
 
   useEffect(() => {
     tickers.forEach((t) => {
@@ -675,7 +678,7 @@ export default function Versus() {
               </div>
               <TimeTabs value={tickerTime} onChange={setTickerTime} />
             </div>
-            <FilterBar chips={TICKER_CHIPS} value={tickerSort} onChange={setTickerSort} />
+            <FilterBar chips={TICKER_CHIPS} value={tickerSort} onChange={setTickerSort} onFilters={() => setTickerFiltersOpen(true)} />
             <div ref={tickersGridRef} className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-5">
               {tickers.map((d, i) => (
                 <BlocksCard key={d.addr || (d.sym + i)} flipId={d.addr || (d.sym + i)} image={d.img} name={d.sym} g={d.g} e={d.e} time={tickerTime}
@@ -714,6 +717,8 @@ export default function Versus() {
       </div>
       <GroupFiltersModal open={groupFiltersOpen} onClose={() => setGroupFiltersOpen(false)}
         value={groupFilters} onApply={setGroupFilters} />
+      <TickerFiltersModal open={tickerFiltersOpen} onClose={() => setTickerFiltersOpen(false)}
+        value={tickerFilters} onApply={setTickerFilters} />
     </div>
   );
 }

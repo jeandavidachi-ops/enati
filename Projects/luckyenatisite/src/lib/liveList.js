@@ -153,6 +153,38 @@ export function tickerComparator(key, sharedMap = {}) {
   }
 }
 
+// ---- Boxe de filtres TICKERS (TickerFiltersModal) ----
+// filters = { sort, minCap, maxCap }. Restreint par tranche de market cap puis trie
+// selon l'option de tri cochee (fallback = tri du chip courant). Data reelle:
+// market_cap, creation_time, groups_count (via sharedMap).
+export const EMPTY_TICKER_FILTERS = { sort: null, minCap: null, maxCap: null }
+
+export function tickerFiltersCount(f) {
+  if (!f) return 0
+  let n = 0
+  if (f.sort) n += 1
+  if (f.minCap != null || f.maxCap != null) n += 1
+  return n
+}
+
+export function applyTickerFilters(list, filters, sharedMap = {}, fallbackComparator) {
+  const f = filters || {}
+  let out = (list || []).slice()
+  const { minCap, maxCap } = f
+  if (minCap != null || maxCap != null) {
+    out = out.filter((t) => {
+      const mc = Number(t.market_cap)
+      if (isNaN(mc)) return false
+      if (minCap != null && mc < minCap) return false
+      if (maxCap != null && mc > maxCap) return false
+      return true
+    })
+  }
+  if (f.sort) out.sort(tickerComparator(f.sort, sharedMap))
+  else if (fallbackComparator) out.sort(fallbackComparator)
+  return out
+}
+
 // ---- Perturbateurs demo : nudge la metrique de tri sur 2-3 lignes au hasard ----
 function pick(list, n) {
   return [...list].sort(() => Math.random() - 0.5).slice(0, n)

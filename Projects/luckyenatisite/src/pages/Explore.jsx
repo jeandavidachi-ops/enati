@@ -5,9 +5,10 @@ import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
 import { useApi, apiFetch, apiInvalidate } from '../lib/api.js'
 import useFlip from '../lib/useFlip.js'
-import { useLiveList, groupComparator, tickerComparator, applyGroupFilters, demoGroups, demoTickers } from '../lib/liveList.js'
+import { useLiveList, groupComparator, tickerComparator, applyGroupFilters, applyTickerFilters, EMPTY_TICKER_FILTERS, demoGroups, demoTickers } from '../lib/liveList.js'
 import FilterBar, { GROUP_CHIPS, TICKER_CHIPS } from '../components/shared/FilterBar.jsx'
 import GroupFiltersModal from '../components/shared/GroupFiltersModal.jsx'
+import TickerFiltersModal from '../components/shared/TickerFiltersModal.jsx'
 
 // ---- Helpers ----
 const GRADS = [
@@ -208,6 +209,8 @@ export default function App({ type = "group" }) {
   const [sort, setSort] = useState(TYPE === 'ticker' ? 'most-scanned' : 'top-ranked');
   const [groupFilters, setGroupFilters] = useState(() => new Set());
   const [groupFiltersOpen, setGroupFiltersOpen] = useState(false);
+  const [tickerFilters, setTickerFilters] = useState(EMPTY_TICKER_FILTERS);
+  const [tickerFiltersOpen, setTickerFiltersOpen] = useState(false);
 
   // Donnees selon le type. useLiveList = polling reel (~8s) + mode demo ?reorder-demo=1.
   const groupsRes = useLiveList(TYPE === "group" ? "/api/all-groups-stats" : null, { demoMutate: demoGroups });
@@ -232,7 +235,7 @@ export default function App({ type = "group" }) {
         g: gradOf(i), e: emojiOf(i),
       }));
     }
-    return (latestRes?.data || []).slice().sort(tickerComparator(sort, sharedMap)).map((c, i) => {
+    return applyTickerFilters(latestRes?.data || [], tickerFilters, sharedMap, tickerComparator(sort, sharedMap)).map((c, i) => {
       const im = tokenImgs[c.contract_address] || {};
       return {
         sym: c.coin_name || "?",
@@ -245,7 +248,7 @@ export default function App({ type = "group" }) {
         g: gradOf(i + 3), e: emojiOf(i + 5),
       };
     });
-  }, [TYPE, groupsRes, latestRes, tokenImgs, sort, sharedMap, groupFilters]);
+  }, [TYPE, groupsRes, latestRes, tokenImgs, sort, sharedMap, groupFilters, tickerFilters]);
 
   // Retour a la page 1 + reset du tri par defaut quand on change de type (/group <-> /ticker)
   useEffect(() => { setPage(1); setSort(TYPE === 'ticker' ? 'most-scanned' : 'top-ranked'); }, [TYPE]);
@@ -314,7 +317,7 @@ export default function App({ type = "group" }) {
             </div>
 
             <FilterBar chips={TYPE === "ticker" ? TICKER_CHIPS : GROUP_CHIPS} value={sort} onChange={setSort}
-              onFilters={TYPE === "group" ? () => setGroupFiltersOpen(true) : undefined} />
+              onFilters={TYPE === "group" ? () => setGroupFiltersOpen(true) : () => setTickerFiltersOpen(true)} />
 
             <div ref={gridRef} className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-6">
               {TYPE === "group"
@@ -362,6 +365,10 @@ export default function App({ type = "group" }) {
       {TYPE === "group" && (
         <GroupFiltersModal open={groupFiltersOpen} onClose={() => setGroupFiltersOpen(false)}
           value={groupFilters} onApply={setGroupFilters} />
+      )}
+      {TYPE === "ticker" && (
+        <TickerFiltersModal open={tickerFiltersOpen} onClose={() => setTickerFiltersOpen(false)}
+          value={tickerFilters} onApply={setTickerFilters} />
       )}
     </div>
   );
