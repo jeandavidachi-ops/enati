@@ -5,7 +5,8 @@ import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
 import { useApi, apiFetch, apiInvalidate } from '../lib/api.js'
 import useFlip from '../lib/useFlip.js'
-import { useLiveList, sortGroups, sortTickers, demoGroups, demoTickers } from '../lib/liveList.js'
+import { useLiveList, groupComparator, tickerComparator, demoGroups, demoTickers } from '../lib/liveList.js'
+import FilterBar, { GROUP_CHIPS, TICKER_CHIPS } from '../components/shared/FilterBar.jsx'
 
 // ---- Helpers ----
 const GRADS = [
@@ -174,6 +175,7 @@ export default function App({ type = "group" }) {
   const TYPE = type;
   const [page, setPage] = useState(1);
   const [tokenImgs, setTokenImgs] = useState({}); // addr -> { img, twitter, telegram }
+  const [sort, setSort] = useState(TYPE === 'ticker' ? 'most-scanned' : 'top-ranked');
 
   // Donnees selon le type. useLiveList = polling reel (~8s) + mode demo ?reorder-demo=1.
   const groupsRes = useLiveList(TYPE === "group" ? "/api/all-groups-stats" : null, { demoMutate: demoGroups });
@@ -188,7 +190,7 @@ export default function App({ type = "group" }) {
 
   const items = useMemo(() => {
     if (TYPE === "group") {
-      return (groupsRes?.data || []).slice().sort(sortGroups).map((g, i) => ({
+      return (groupsRes?.data || []).slice().sort(groupComparator(sort)).map((g, i) => ({
         id: g.group_id,
         name: g.group_name || "Unknown",
         win: Math.round(g.win_rate || 0),
@@ -198,7 +200,7 @@ export default function App({ type = "group" }) {
         g: gradOf(i), e: emojiOf(i),
       }));
     }
-    return (latestRes?.data || []).slice().sort(sortTickers).map((c, i) => {
+    return (latestRes?.data || []).slice().sort(tickerComparator(sort, sharedMap)).map((c, i) => {
       const im = tokenImgs[c.contract_address] || {};
       return {
         sym: c.coin_name || "?",
@@ -211,10 +213,10 @@ export default function App({ type = "group" }) {
         g: gradOf(i + 3), e: emojiOf(i + 5),
       };
     });
-  }, [TYPE, groupsRes, latestRes, tokenImgs]);
+  }, [TYPE, groupsRes, latestRes, tokenImgs, sort, sharedMap]);
 
-  // Retour a la page 1 quand on change de type (/group <-> /ticker)
-  useEffect(() => { setPage(1); }, [TYPE]);
+  // Retour a la page 1 + reset du tri par defaut quand on change de type (/group <-> /ticker)
+  useEffect(() => { setPage(1); setSort(TYPE === 'ticker' ? 'most-scanned' : 'top-ranked'); }, [TYPE]);
 
   const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const start = (page - 1) * PAGE_SIZE;
@@ -244,7 +246,7 @@ export default function App({ type = "group" }) {
   useFlip(gridRef, orderedIds);
 
   const title = TYPE === "ticker" ? "All Tickers" : "All Groups";
-  const subtitle = TYPE === "ticker" ? "Every recently called token." : "Every group making crypto calls.";
+  const subtitle = TYPE === "ticker" ? "Discover the most scanned tokens on Versus." : "Discover the most active and growing groups on Versus.";
   const navCls = (active) => "hover:text-white" + (active ? " text-white" : "");
 
   return (
@@ -278,6 +280,8 @@ export default function App({ type = "group" }) {
               </div>
               <Link to="/" className="text-sm px-4 py-2 rounded-xl bg-zinc-900 ring-1 ring-white/10 text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">← Home</Link>
             </div>
+
+            <FilterBar chips={TYPE === "ticker" ? TICKER_CHIPS : GROUP_CHIPS} value={sort} onChange={setSort} />
 
             <div ref={gridRef} className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-6">
               {TYPE === "group"

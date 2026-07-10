@@ -5,8 +5,9 @@ import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
 import { useApi, apiFetch, apiInvalidate } from '../lib/api.js'
 import useFlip from '../lib/useFlip.js'
-import { useLiveList, sortGroups, sortTickers, sortUsers, demoGroups, demoTickers, demoUsers } from '../lib/liveList.js'
+import { useLiveList, sortUsers, groupComparator, tickerComparator, demoGroups, demoTickers, demoUsers } from '../lib/liveList.js'
 import ProfileContent from './ProfileContent.jsx'
+import FilterBar, { GROUP_CHIPS, TICKER_CHIPS } from '../components/shared/FilterBar.jsx'
 
 // ---- Helpers ----
 const GRADS = [
@@ -431,6 +432,8 @@ export default function Versus() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [groupTime, setGroupTime] = useState("1h");
   const [tickerTime, setTickerTime] = useState("12h");
+  const [groupSort, setGroupSort] = useState("top-ranked");
+  const [tickerSort, setTickerSort] = useState("most-scanned");
   const [lbCollapsed, setLbCollapsed] = useState(false);
   // Callbacks stables pour que LeaderboardSidebar (React.memo) ne se re-render pas
   // quand seul selectedUser change (le sidebar rend jusqu'a 100 lignes).
@@ -487,7 +490,7 @@ export default function Versus() {
   }, [sharedRes]);
 
   // Groupes : strip du haut + Popular Groups (12 premiers), tries Win Rate desc.
-  const groups = useMemo(() => (groupsStats?.data || []).slice().sort(sortGroups).slice(0, 12).map((g, i) => ({
+  const groups = useMemo(() => (groupsStats?.data || []).slice().sort(groupComparator(groupSort)).slice(0, 12).map((g, i) => ({
     id: g.group_id,
     name: g.group_name || "Unknown",
     win: Math.round(g.win_rate || 0),
@@ -496,7 +499,7 @@ export default function Versus() {
     calls: g.total_members || 0,
     img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
     g: gradOf(i), e: emojiOf(i),
-  })), [groupsStats]);
+  })), [groupsStats, groupSort]);
 
   // Re-mesure quand la bande Groups se remplit (change sa hauteur)
   useEffect(() => {
@@ -504,7 +507,7 @@ export default function Versus() {
   }, [groups]);
 
   // Derniers coins (Popular Tickers) + leur image (mise en cache), tries Multiplier desc.
-  const tickers = useMemo(() => (latestRes?.data || []).slice().sort(sortTickers).slice(0, 12).map((c, i) => {
+  const tickers = useMemo(() => (latestRes?.data || []).slice().sort(tickerComparator(tickerSort, sharedMap)).slice(0, 12).map((c, i) => {
     const im = tokenImgs[c.contract_address] || {};
     return {
       sym: c.coin_name || "?",
@@ -517,7 +520,7 @@ export default function Versus() {
       telegram: im.telegram || null,
       g: gradOf(i + 3), e: emojiOf(i + 5),
     };
-  }), [latestRes, tokenImgs]);
+  }), [latestRes, tokenImgs, tickerSort, sharedMap]);
 
   useEffect(() => {
     tickers.forEach((t) => {
@@ -591,10 +594,11 @@ export default function Versus() {
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-2xl font-semibold">Popular Groups</h2>
-                <p className="text-sm text-zinc-500 mt-1">See which groups are making the best crypto calls right now.</p>
+                <p className="text-sm text-zinc-500 mt-1">Discover the most active and growing groups on Versus.</p>
               </div>
               <TimeTabs value={groupTime} onChange={setGroupTime} />
             </div>
+            <FilterBar chips={GROUP_CHIPS} value={groupSort} onChange={setGroupSort} />
             <div ref={groupsGridRef} className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-5">
               {groups.map((d) => (
                 <BlocksCard key={d.id} flipId={d.id} image={d.img} name={d.name} g={d.g} e={d.e} time={groupTime} join groupId={d.id}
@@ -616,10 +620,11 @@ export default function Versus() {
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-2xl font-semibold">Popular Tickers</h2>
-                <p className="text-sm text-zinc-500 mt-1">The most recently called tokens.</p>
+                <p className="text-sm text-zinc-500 mt-1">Discover the most scanned tokens on Versus.</p>
               </div>
               <TimeTabs value={tickerTime} onChange={setTickerTime} />
             </div>
+            <FilterBar chips={TICKER_CHIPS} value={tickerSort} onChange={setTickerSort} />
             <div ref={tickersGridRef} className="grid grid-cols-[repeat(auto-fill,minmax(clamp(340px,20vw,440px),1fr))] gap-5 mt-5">
               {tickers.map((d, i) => (
                 <BlocksCard key={d.addr || (d.sym + i)} flipId={d.addr || (d.sym + i)} image={d.img} name={d.sym} g={d.g} e={d.e} time={tickerTime}

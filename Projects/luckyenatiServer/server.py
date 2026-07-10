@@ -933,6 +933,7 @@ def get_all_groups_stats():
                     'total_defeats': {'$sum': '$defeat'},
                     'total_current_stat': {'$sum': '$current_stat'},
                     'max_current_stat': {'$max': '$current_stat'},
+                    'created_at': {'$min': '$creation_time'},  # 1er call du groupe -> tri "New Groups"
                     'total_members': {'$sum': 1}  # Количество записей в группе
                 }
             },
@@ -978,6 +979,7 @@ def get_all_groups_stats():
                 'total_current_stat': group.get('total_current_stat', 0),
                 'score': group.get('score', 0),
                 'total_members': group['total_members'],
+                'created_at': group.get('created_at'),
                 'win_rate': round(group['win_rate'], 2)  # Округляем до 2 знаков после запятой
             }
             formatted_stats.append(formatted_group)

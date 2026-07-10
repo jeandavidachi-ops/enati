@@ -63,6 +63,42 @@ export function sortUsers(a, b) {
   return (b.win || 0) - (a.win || 0) || (b.calls || 0) - (a.calls || 0)
 }
 
+// ---- Tri par chip de filtre (barre FilterBar) ----
+// creation_time des tickers arrive au format "dd.mm.yyyy hh:mm" -> timestamp comparable.
+export function parseTs(s) {
+  if (!s) return 0
+  if (typeof s !== 'string') { const t = new Date(s).getTime(); return isNaN(t) ? 0 : t }
+  const m = s.match(/(\d{2})\.(\d{2})\.(\d{4})[ T]?(\d{2})?:?(\d{2})?/)
+  if (!m) { const t = Date.parse(s); return isNaN(t) ? 0 : t }
+  const [, d, mo, y, h = '0', mi = '0'] = m
+  return new Date(+y, +mo - 1, +d, +h, +mi).getTime()
+}
+
+// Comparateur groupes selon la cle du chip. sharedMap non utilise ici.
+export function groupComparator(key) {
+  switch (key) {
+    case 'most-members': return (a, b) => (b.total_members || 0) - (a.total_members || 0)
+    case 'new-groups': return (a, b) => parseTs(b.created_at) - parseTs(a.created_at)
+    case 'most-active': return (a, b) => (b.total_current_stat || 0) - (a.total_current_stat || 0)
+    case 'fastest-growing': return (a, b) => (b.max_current_stat || 0) - (a.max_current_stat || 0)
+    case 'top-ranked':
+    default: return (a, b) => (b.score || 0) - (a.score || 0) || (b.total_wins || 0) - (a.total_wins || 0)
+  }
+}
+
+// Comparateur tickers selon la cle du chip. sharedMap: addr(lower) -> groups_count.
+export function tickerComparator(key, sharedMap = {}) {
+  const gc = (x) => sharedMap[String(x.contract_address || '').toLowerCase()] || 0
+  switch (key) {
+    case 'market-cap': return (a, b) => (b.market_cap || 0) - (a.market_cap || 0)
+    case 'oldest': return (a, b) => parseTs(a.creation_time) - parseTs(b.creation_time)
+    case 'latest-scan':
+    case 'newest': return (a, b) => parseTs(b.creation_time) - parseTs(a.creation_time)
+    case 'most-scanned':
+    default: return (a, b) => gc(b) - gc(a) || (b.current_stat || 0) - (a.current_stat || 0)
+  }
+}
+
 // ---- Perturbateurs demo : nudge la metrique de tri sur 2-3 lignes au hasard ----
 function pick(list, n) {
   return [...list].sort(() => Math.random() - 0.5).slice(0, n)
