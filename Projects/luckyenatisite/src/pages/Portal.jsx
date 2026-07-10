@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect, useLayoutEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApi } from '../lib/api.js'
+import SoundControl from '../components/SoundControl.jsx'
 
 // =====================================================================
 //  Page racine : "Versus Guild Portal" + "Versus Registered Arena",
@@ -378,6 +379,9 @@ export default function Portal() {
         </div>
 
       </div>
+
+      {/* Bouton de son (bas-droite) : mute/unmute + volume */}
+      <SoundControl />
     </div>
   )
 }

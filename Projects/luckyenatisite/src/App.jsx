@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import { AudioProvider } from './lib/audio.jsx'
 import Home from './pages/Home.jsx'
+import Enter from './pages/Enter.jsx'
 import Portal from './pages/Portal.jsx'
 import Leaderboards from './pages/Leaderboards.jsx'
 import Explore from './pages/Explore.jsx'
@@ -26,8 +28,10 @@ export default function App() {
   }, [])
 
   return (
+    <AudioProvider>
     <Routes>
-      <Route path="/" element={<Portal />} />
+      <Route path="/" element={<Enter />} />
+      <Route path="/register" element={<Portal />} />
       <Route path="/home" element={<Home />} />
       <Route path="/leaderboard" element={<Leaderboards />} />
       <Route path="/leaderboards" element={<Leaderboards />} />
@@ -39,5 +43,6 @@ export default function App() {
       <Route path="/account" element={<ManageAccount />} />
       <Route path="/groups" element={<YourGroups />} />
     </Routes>
+    </AudioProvider>
   )
 }

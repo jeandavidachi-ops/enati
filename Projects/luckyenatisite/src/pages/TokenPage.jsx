@@ -60,7 +60,7 @@ function Header() {
   return (
     <header className="pl-6 pr-4 sm:pr-6 lg:pr-10 xl:pr-16 2xl:pr-24 py-5">
       <div className="w-full flex items-center gap-6">
-        <Link to="/" style={{ fontFamily: "Arial, Helvetica, sans-serif" }} className="text-2xl font-semibold tracking-[0.15em] italic select-none text-zinc-300">VERSUS</Link>
+        <Link to="/home" style={{ fontFamily: "Arial, Helvetica, sans-serif" }} className="text-2xl font-semibold tracking-[0.15em] italic select-none text-zinc-300">VERSUS</Link>
         <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-300">
           <Link className="hover:text-white" to="/ticker">Tickers</Link>
           <Link className="hover:text-white" to="/group">Groups</Link>
