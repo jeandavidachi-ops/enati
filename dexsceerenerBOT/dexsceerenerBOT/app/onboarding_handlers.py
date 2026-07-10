@@ -2,7 +2,7 @@ from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import ChatMemberUpdated, Message
 
-from config import TOKEN, SITE_URL
+from config import TOKEN
 import app.mongodb as md
 
 onboarding_handlers = Router()
@@ -90,8 +90,7 @@ async def cmd_invitation_code(message: Message, command: CommandObject = None):
         await message.reply(
             "✅ *Registered!* This group is now on the Versus waitlist.\n\n"
             f"🎟️ *Your referral code:* `{referral}`\n"
-            "Share it with every group you invite — it can be reused as many times as you like.\n\n"
-            f"👉 {SITE_URL}",
+            "Share it with every group you invite — it can be reused as many times as you like.",
             parse_mode='Markdown')
     else:  # invalid
         await message.reply(
