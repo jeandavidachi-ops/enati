@@ -61,9 +61,9 @@ export default function FilterBar({ chips, value, onChange, onFilters }) {
               color: '#f7f7f7',
               letterSpacing: '-0.4px',
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.035), 0 18px 55px rgba(0,0,0,0.22)',
-              // Actif = meme bordure, fond legerement plus clair (indicateur discret du tri).
+              // Actif = meme bordure, fond nettement plus clair (indicateur bien visible du tri).
               background: active
-                ? 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)), rgba(0,1,1,0.92)'
+                ? 'linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06)), rgba(0,1,1,0.92)'
                 : 'linear-gradient(180deg, rgba(255,255,255,0.018), rgba(255,255,255,0.004)), rgba(0,1,1,0.92)',
             }}
           >
