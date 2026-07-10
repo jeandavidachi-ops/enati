@@ -53,6 +53,7 @@ function Arena({ groups }) {
   const [view, setView] = useState({ W: 1100, H: 660, zoom: 1, pan: { x: 550, y: 330 }, ready: false })
   const [hovered, setHovered] = useState(null)
   const [dragging, setDragging] = useState(false)
+  const [imgFailed, setImgFailed] = useState(() => new Set())
 
   // Cadrage initial + re-cadrage au resize (memes formules que le modele).
   useLayoutEffect(() => {
@@ -130,11 +131,12 @@ function Arena({ groups }) {
         els.push(
           <g key={'s' + i}>
             <clipPath id={'seatClip' + i}><circle cx={cx} cy={cy} r={seatR} /></clipPath>
-            <circle cx={cx} cy={cy} r={seatR} fill="url(#seatGrad)" pointerEvents="none" />
-            {gid != null && (
+            <circle cx={cx} cy={cy} r={seatR} fill={gid == null || imgFailed.has(gid) ? '#ffffff' : 'url(#seatGrad)'} pointerEvents="none" />
+            {gid != null && !imgFailed.has(gid) && (
               <image href={`/api/group-photo/${gid}`} x={cx - seatR} y={cy - seatR}
                 width={seatR * 2} height={seatR * 2} clipPath={`url(#seatClip${i})`}
-                preserveAspectRatio="xMidYMid slice" pointerEvents="none" />
+                preserveAspectRatio="xMidYMid slice" pointerEvents="none"
+                onError={() => setImgFailed((s) => (s.has(gid) ? s : new Set(s).add(gid)))} />
             )}
             <circle cx={cx} cy={cy} r={seatR} fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1" pointerEvents="none" />
             <circle cx={cx} cy={cy} r={seatR} fill="transparent" style={{ cursor: 'pointer' }}
