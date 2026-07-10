@@ -620,7 +620,7 @@ export default function Versus() {
 
         <div className="border-y border-white/5 pl-6 pr-4 sm:pr-6 lg:pr-10 xl:pr-16 2xl:pr-24 py-3">
           <div className="w-full flex items-center gap-5 overflow-x-auto no-scrollbar">
-            <span className="text-sm text-zinc-400 shrink-0 flex items-center gap-2">Historic <span className="text-zinc-600">â§‰</span></span>
+            <span className="text-sm text-zinc-400 shrink-0 flex items-center gap-2">Historic</span>
             {history.length === 0 && (
               <span className="text-sm text-zinc-600 shrink-0">No history yet</span>
             )}
