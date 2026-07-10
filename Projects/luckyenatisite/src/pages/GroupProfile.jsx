@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
-import { useApi } from '../lib/api.js'
+import { useApi, recordVisit } from '../lib/api.js'
 
 const MONO = "'Geist Pixel', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
@@ -186,6 +186,16 @@ export default function App() {
 
   const hero = data && data.hero;
   const photo = gid ? "/api/group-photo/" + gid : null;
+
+  // Historique : enregistre la visite dès que le groupe est chargé.
+  useEffect(() => {
+    if (!hero || !gid) return;
+    recordVisit({
+      kind: 'group', ref: gid,
+      name: hero.group_name || '',
+      img: '/api/group-photo/' + gid,
+    });
+  }, [gid, hero && hero.group_name]);
 
   return (
     <div className="min-h-screen bg-[#0b0b0c] font-mono text-white">

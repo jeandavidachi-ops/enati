@@ -39,6 +39,36 @@ export function prefetch(urls) {
   urls.forEach((u) => { apiFetch(u).catch(() => {}) })
 }
 
+// --- Historique de navigation (banderole "Historic" de l'accueil) ---
+const HISTORY_KEY = 'vs_history'   // fallback localStorage (invités / hors-ligne)
+
+// Lit l'historique local (liste dédupliquée, plus récent en tête, max 10).
+export function localHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]') } catch { return [] }
+}
+
+function pushLocalHistory(item) {
+  const list = localHistory().filter(
+    (h) => !(h.kind === item.kind && h.ref === item.ref)
+  )
+  list.unshift(item)
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 10))) } catch {}
+}
+
+// Enregistre une visite : en BDD si connecté (POST), sinon fallback localStorage.
+// Écrit toujours en local aussi pour un rendu instantané côté banderole.
+export function recordVisit(item) {
+  if (!item || !item.kind || !item.ref) return
+  pushLocalHistory(item)
+  apiInvalidate('/api/me/history')
+  fetch('/api/me/visit', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(item),
+  }).catch(() => {})
+}
+
 // Hook : rend la donnée en cache immédiatement (rendu instantané si cache chaud),
 // puis met à jour quand le fetch résout. `undefined` tant que rien n'est chargé.
 export function useApi(url) {

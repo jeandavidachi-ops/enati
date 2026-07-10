@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
-import { useApi } from '../lib/api.js'
+import { useApi, recordVisit } from '../lib/api.js'
 
 const MONO = "'Geist Pixel', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
@@ -170,6 +170,16 @@ export default function App() {
 
   const token = data && data.token;
   const m = (data && data.metrics) || {};
+
+  // Historique : enregistre la visite dès que le token est chargé.
+  useEffect(() => {
+    if (!token || !address) return;
+    recordVisit({
+      kind: 'token', ref: address,
+      name: token.name || token.symbol || '',
+      img: '/api/token-photo/' + address,
+    });
+  }, [address, token && (token.name || token.symbol)]);
   const shortAddr = address ? (address.slice(0, 6) + "…" + address.slice(-4)) : "";
 
   const changeColor = m.change_24h == null ? "#F5F5F5" : (m.change_24h >= 0 ? "#3fd35f" : "#f87171");

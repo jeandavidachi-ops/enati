@@ -123,6 +123,10 @@ user_stats = db['user_stats']
 # pour ne pas surcharger l'API Telegram. Lue par /api/all-groups-stats (jamais
 # d'appel Telegram dans le chemin d'une requete). Un doc par group_id.
 group_meta = db['group_meta']
+# Historique de navigation PAR utilisateur : derniers tokens/groupes visites.
+# Un doc par (user_id, kind, ref) ; upsert a chaque visite -> pas de doublon,
+# l'item remonte en tete. Lu par /api/me/history (banderole "Historic" accueil).
+user_visits = db['user_visits']
 try:
     user_stats.create_index([('calls', -1), ('total_stat', -1)])
 except Exception as _e:
@@ -135,6 +139,8 @@ try:
     # Expiration automatique des jetons apres 10 min (TTL index Mongo).
     tg_link_tokens.create_index('created_at', expireAfterSeconds=600)
     user_joined_groups.create_index([('user_id', 1), ('group_id', 1)], unique=True)
+    user_visits.create_index([('user_id', 1), ('kind', 1), ('ref', 1)], unique=True)
+    user_visits.create_index([('user_id', 1), ('visited_at', -1)])
 except Exception as _e:
     logger.warning(f"Auth index setup: {_e}")
 
@@ -1278,6 +1284,41 @@ def get_me_stats():
     }
     _persist_user_stats(user, out)
     return jsonify({'success': True, **out})
+
+
+@app.route('/api/me/visit', methods=['POST'])
+def record_me_visit():
+    """Enregistre une visite (page ticker ou groupe) dans l'historique du user.
+    Upsert sur (user_id, kind, ref) : pas de doublon, l'item remonte en tete."""
+    user = _current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'not_authenticated'}), 401
+    data = request.get_json(silent=True) or {}
+    kind = (data.get('kind') or '').strip()
+    ref = str(data.get('ref') or '').strip()
+    if kind not in ('token', 'group') or not ref:
+        return jsonify({'success': False, 'error': 'invalid_visit'}), 400
+    name = (data.get('name') or '').strip()
+    img = (data.get('img') or '').strip()
+    user_visits.update_one(
+        {'user_id': user['id'], 'kind': kind, 'ref': ref},
+        {'$set': {'name': name, 'img': img, 'visited_at': time.time()}},
+        upsert=True,
+    )
+    return jsonify({'success': True})
+
+
+@app.route('/api/me/history', methods=['GET'])
+def get_me_history():
+    """Les 10 derniers tokens/groupes visites par le user (plus recent d'abord)."""
+    user = _current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'not_authenticated'}), 401
+    rows = user_visits.find({'user_id': user['id']}).sort('visited_at', -1).limit(10)
+    data = [{'kind': r.get('kind'), 'ref': r.get('ref'),
+             'name': r.get('name') or '', 'img': r.get('img') or ''}
+            for r in rows]
+    return jsonify({'success': True, 'data': data})
 
 
 def _ago(ts):

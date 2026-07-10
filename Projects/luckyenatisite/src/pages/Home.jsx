@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import VsSearch from '../components/VsSearch.jsx'
 import AuthCorner from '../components/AuthCorner.jsx'
 import useGlobalZoom from '../hooks/useGlobalZoom.js'
-import { useApi, apiFetch, apiInvalidate } from '../lib/api.js'
+import { useApi, apiFetch, apiInvalidate, localHistory } from '../lib/api.js'
 import useFlip from '../lib/useFlip.js'
 import { useLiveList, sortUsers, groupComparator, tickerComparator, applyGroupFilters, demoGroups, demoTickers, demoUsers } from '../lib/liveList.js'
 import ProfileContent from './ProfileContent.jsx'
@@ -526,6 +526,20 @@ export default function Versus() {
     g: gradOf(i), e: emojiOf(i),
   })), [groupsStats, groupSort, groupFilters]);
 
+  // Historique de navigation (banderole "Historic" du haut) : derniers tokens/
+  // groupes visites, plus recent a gauche. En BDD si connecte, sinon localStorage.
+  const historyRes = useApi("/api/me/history");
+  const history = useMemo(() => {
+    const server = historyRes && historyRes.success ? (historyRes.data || []) : null;
+    const list = (server && server.length) ? server : localHistory();
+    return list.slice(0, 10).map((h) => ({
+      kind: h.kind, ref: h.ref, name: h.name || "Unknown",
+      img: h.img || null,
+      to: h.kind === "group" ? ("/group/" + h.ref) : ("/ticker/" + h.ref),
+      prefetch: h.kind === "group" ? ("/api/group/" + h.ref) : ("/api/token/" + h.ref),
+    }));
+  }, [historyRes]);
+
   // Menu de gauche (onglet Leaderboard) : liste des groupes classes, avec les
   // tokens trades par le groupe en badges de droite.
   const lbGroups = useMemo(() => (groupsStats?.data || []).map((g, i) => ({
@@ -606,16 +620,17 @@ export default function Versus() {
 
         <div className="border-y border-white/5 pl-6 pr-4 sm:pr-6 lg:pr-10 xl:pr-16 2xl:pr-24 py-3">
           <div className="w-full flex items-center gap-5 overflow-x-auto no-scrollbar">
-            <span className="text-sm text-zinc-400 shrink-0 flex items-center gap-2">Groups <span className="text-zinc-600">â§‰</span></span>
-            {groups.map((g, i) => {
-              const StripTag = g.id ? Link : "a";
-              return (
-              <StripTag key={i} {...(g.id ? { to: "/group/" + g.id, onMouseEnter: () => apiFetch("/api/group/" + g.id) } : {})} className={"flex items-center gap-2 shrink-0" + (g.id ? " cursor-pointer hover:text-white" : "")}>
-                <Avatar src={g.img} g={g.g} e={g.e} className="w-6 h-6 rounded-md text-xs" />
-                <span className="text-sm text-zinc-200">{g.name}</span>
-              </StripTag>
-              );
-            })}
+            <span className="text-sm text-zinc-400 shrink-0 flex items-center gap-2">Historic <span className="text-zinc-600">â§‰</span></span>
+            {history.length === 0 && (
+              <span className="text-sm text-zinc-600 shrink-0">No history yet</span>
+            )}
+            {history.map((h, i) => (
+              <Link key={h.kind + h.ref} to={h.to} onMouseEnter={() => apiFetch(h.prefetch)}
+                className="flex items-center gap-2 shrink-0 cursor-pointer hover:text-white">
+                <Avatar src={h.img} className={"w-6 h-6 text-xs " + (h.kind === "group" ? "rounded-md" : "rounded-full")} />
+                <span className="text-sm text-zinc-200">{h.name}</span>
+              </Link>
+            ))}
           </div>
         </div>
         </div>
