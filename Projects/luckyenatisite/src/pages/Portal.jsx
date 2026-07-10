@@ -276,13 +276,13 @@ export default function Portal() {
           </div>
         </div>
 
-        {/* Emblème animé (VS noir — modele "guild noir") */}
+        {/* Emblème animé (VS noir — a l'identique du modele new/guild noir.html) */}
         <div style={{ position: 'relative', width: 150, height: 150, marginBottom: 22 }}>
           <div style={{ position: 'absolute', top: '50%', left: '50%', width: 220, height: 220, transform: 'translate(-50%,-50%)', background: 'radial-gradient(circle, rgba(255,255,255,0.16), transparent 62%)', animation: 'vs-pulse 3.4s ease-in-out infinite', pointerEvents: 'none' }} />
           <div style={{ position: 'absolute', inset: -6, border: '1px dashed rgba(255,255,255,0.28)', borderRadius: '50%', animation: 'vs-spin 14s linear infinite' }} />
-          <div style={{ position: 'absolute', inset: 20, border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%' }} />
-          <div style={{ position: 'absolute', inset: 26, background: '#0B0D10', border: '1px solid rgba(255,255,255,0.45)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            <span style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: 46, letterSpacing: 4, color: '#ffffff', lineHeight: 1, marginLeft: 4 }}>VS</span>
+          <div style={{ position: 'absolute', inset: 14, border: '1px solid rgba(255,255,255,0.12)', borderTopColor: 'rgba(255,255,255,0.55)', borderRadius: '50%', animation: 'vs-spin-rev 8s linear infinite' }} />
+          <div style={{ position: 'absolute', inset: 26, background: '#0B0D10', border: '1px solid rgba(255,255,255,0.20)', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <img src="/images/vs-noir.png" alt="Versus" style={{ width: '62%', height: '62%', objectFit: 'contain', display: 'block' }} />
           </div>
         </div>
 
