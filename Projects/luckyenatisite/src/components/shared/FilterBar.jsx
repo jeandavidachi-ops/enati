@@ -53,13 +53,19 @@ export default function FilterBar({ chips, value, onChange, onFilters }) {
             key={c.key}
             type="button"
             onClick={() => (isFilters ? (onFilters && onFilters()) : (onChange && onChange(c.key)))}
-            className={
-              'flex-none inline-flex items-center gap-2 h-11 px-4 rounded-xl border text-sm font-medium whitespace-nowrap transition-colors ' +
-              (c.right ? 'ml-auto ' : '') +
-              (active
-                ? 'border-white/30 text-white bg-white/[.06] '
-                : 'border-white/12 text-zinc-300 hover:text-white hover:border-white/25 bg-gradient-to-b from-white/[.02] to-transparent')
-            }
+            className={'flex-none inline-flex items-center gap-2 h-11 px-4 text-sm font-medium whitespace-nowrap ' + (c.right ? 'ml-auto ' : '')}
+            style={{
+              // Style repris tel quel de new/versus_filters_1to1_left_match/styles.css (variante compacte)
+              border: '1.5px solid rgba(255,255,255,0.205)',
+              borderRadius: '10px',
+              color: '#f7f7f7',
+              letterSpacing: '-0.4px',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.035), 0 18px 55px rgba(0,0,0,0.22)',
+              // Actif = meme bordure, fond legerement plus clair (indicateur discret du tri).
+              background: active
+                ? 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)), rgba(0,1,1,0.92)'
+                : 'linear-gradient(180deg, rgba(255,255,255,0.018), rgba(255,255,255,0.004)), rgba(0,1,1,0.92)',
+            }}
           >
             <Icon />
             <span>{c.label}</span>
