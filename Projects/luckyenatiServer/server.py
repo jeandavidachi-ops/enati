@@ -273,11 +273,12 @@ def versus_registered_groups():
     """Groupes enregistres (waitlist) -> un point par groupe dans l'Arena.
     Photo servie via l'endpoint existant /api/group-photo/<group_id>."""
     data = []
-    for g in versus_waitlist.find({}, {'group_id': 1, 'group_name': 1}):
+    for g in versus_waitlist.find({}, {'group_id': 1, 'group_name': 1, 'added_at': 1}).sort('added_at', 1):
         gid = g.get('group_id')
         if gid is None:
             continue
-        data.append({'group_id': gid, 'group_name': g.get('group_name') or 'Unknown'})
+        data.append({'group_id': gid, 'group_name': g.get('group_name') or 'Unknown',
+                     'added_at': g.get('added_at')})
     return jsonify({'success': True, 'data': data})
 
 
