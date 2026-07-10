@@ -68,7 +68,7 @@
   .lb-side .rows::-webkit-scrollbar-thumb{background:#2a2c33;border-radius:6px}
   .lb-side .rows::-webkit-scrollbar-thumb:hover{background:#3a3d46}
   .lb-side .rows{scrollbar-width:thin;scrollbar-color:#2a2c33 transparent}
-  .lb-side .row{height:48px;display:grid;grid-template-columns:34px 40px 1fr auto;align-items:center;column-gap:8px;border-bottom:1px solid rgba(255,255,255,.045);transition:transform .2s ease,background .2s ease,border-radius .2s ease}
+  .lb-side .row{min-height:48px;padding:7px 0;display:grid;grid-template-columns:34px 40px 1fr auto;align-items:center;column-gap:8px;border-bottom:1px solid rgba(255,255,255,.045);transition:transform .2s ease,background .2s ease,border-radius .2s ease}
   .lb-side .row:hover{background:#181d1e;transform:translateY(-2px);border-radius:8px}
   .lb-side .place{width:30px;text-align:center;color:#c5c7d1;font-size:13px;font-weight:500}
   .lb-side .medal{width:18px;height:22px;margin:0 auto;position:relative;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#151515}
@@ -85,7 +85,7 @@
   .lb-side .right{text-align:right}
   .lb-side .pnl{font-size:13px;font-weight:900;color:var(--lb-green);letter-spacing:-.2px;white-space:nowrap}
   .lb-side .badges{display:flex;justify-content:flex-end;align-items:center;gap:0;margin-top:7px;height:14px}
-  .lb-side .badge{width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;margin-left:-3px;background:#24262d;border:1px solid rgba(255,255,255,.08)}
+  .lb-side .badge{width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;margin-left:-3px;background:#24262d;border:1px solid rgba(255,255,255,.08);overflow:hidden;flex:none}
   .lb-side .more{height:15px;min-width:20px;border-radius:8px;padding:0 6px;background:#23242a;color:#d6d7dd;font-size:9px;line-height:15px;margin-left:2px;text-align:center}
   .lb-side .user,.lb-side .user strong,.lb-side .user small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* etat replie */

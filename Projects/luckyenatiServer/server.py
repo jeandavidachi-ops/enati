@@ -1538,6 +1538,9 @@ def _rebuild_user_stats():
     try:
         pipeline = [
             {'$match': {'caller_id': {'$ne': None}}},
+            # Tri par recence AVANT le group pour que 'contracts' soit en ordre
+            # decroissant (tokens les plus recents en tete) -> bubbles "3 derniers".
+            {'$sort': {'creation_time': -1}},
             {'$group': {
                 '_id': '$caller_id',
                 'name': {'$first': {'$ifNull': ['$caller_name', 'Unknown']}},
@@ -1548,6 +1551,7 @@ def _rebuild_user_stats():
                 'max_stat': {'$max': '$current_stat'},
                 'calls': {'$sum': 1},
                 'groups': {'$addToSet': '$group_id'},
+                'contracts': {'$push': '$contract_address'},
                 'first_call': {'$min': '$creation_time'},
             }},
             {'$sort': {'calls': -1, 'total_stat': -1}},
@@ -1564,6 +1568,17 @@ def _rebuild_user_stats():
             win_rate = round((wins / (wins + defeats) * 100)) if (wins + defeats) > 0 else 0
             avg = (c.get('total_stat', 0) / c_calls) if c_calls > 0 else 0
             groups = [g for g in (c.get('groups') or []) if g is not None]
+            # Tokens distincts en preservant l'ordre de recence (contracts deja
+            # tries desc par creation_time). 3 plus recents + compte des restants.
+            distinct_tokens = []
+            seen = set()
+            for addr in (c.get('contracts') or []):
+                if not addr or addr in seen:
+                    continue
+                seen.add(addr)
+                distinct_tokens.append(addr)
+            recent_tokens = distinct_tokens[:3]
+            tokens_more = max(0, len(distinct_tokens) - 3)
             doc = {
                 '_id': c['_id'],
                 'name': c.get('name') or 'Unknown',
@@ -1577,6 +1592,8 @@ def _rebuild_user_stats():
                 'avg': round(avg, 1),
                 'high': c.get('max_stat', 0) or 0,
                 'groups_joined': len(groups),
+                'recent_tokens': recent_tokens,
+                'tokens_more': tokens_more,
                 'first_call': c.get('first_call'),
                 'rank': rank,
                 'updated_at': now,
@@ -1635,6 +1652,8 @@ def get_all_callers():
             'high': f"{c.get('high', 0)}x",
             'calls': c.get('calls', 0),
             'img': f"/api/user-photo/{c['_id']}",
+            'tokens': [f"/api/token-photo/{addr}" for addr in (c.get('recent_tokens') or [])],
+            'tokens_more': c.get('tokens_more', 0),
         })
     return jsonify({'success': True, 'data': out})
 

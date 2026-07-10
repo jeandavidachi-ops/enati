@@ -337,7 +337,20 @@ const LeaderboardSidebar = React.memo(function LeaderboardSidebar({ collapsed, o
                 <LbMedal rank={String(i + 1)} />
                 <Avatar src={row.img} g={row.g} e={row.e} className="avatar" />
                 <div className="user"><strong>{row.name}</strong></div>
-                <div className="right"><div className="pnl">{row.win || ''}</div></div>
+                <div className="right">
+                  <div className="pnl">+$0</div>
+                  {row.tokens && row.tokens.length > 0 && (
+                    <div className="badges">
+                      {row.tokens.slice(0, 3).map((src, k) => (
+                        <span className="badge" key={k}>
+                          <img src={src} alt="" onError={(e) => { e.currentTarget.parentElement.style.display = 'none'; }}
+                            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                        </span>
+                      ))}
+                      {row.tokensMore > 0 && <span className="more">+{row.tokensMore}</span>}
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -460,6 +473,8 @@ export default function Versus() {
     img: c.caller_id != null ? ("/api/user-photo/" + c.caller_id) : null,
     win: c.win,
     calls: c.calls,
+    tokens: c.tokens || [],
+    tokensMore: c.tokens_more || 0,
   })), [callersRes]);
 
   // Nombre de groupes par token (contract_address -> groups_count)
