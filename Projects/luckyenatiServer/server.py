@@ -127,6 +127,11 @@ group_meta = db['group_meta']
 # Un doc par (user_id, kind, ref) ; upsert a chaque visite -> pas de doublon,
 # l'item remonte en tete. Lu par /api/me/history (banderole "Historic" accueil).
 user_visits = db['user_visits']
+# Onboarding "Versus Guild Portal" : codes d'invitation generes par le bot a la
+# promotion admin (validation du Register cote site) + waitlist des groupes
+# enregistres (points de la "Versus Registered Arena"). Ecrit par le bot, lu ici.
+invitation_codes = db['versus_invitation_codes']
+versus_waitlist = db['versus_waitlist']
 try:
     user_stats.create_index([('calls', -1), ('total_stat', -1)])
 except Exception as _e:
@@ -231,6 +236,49 @@ def auth_logout():
 @app.route('/api/auth/me', methods=['GET'])
 def auth_me():
     return jsonify({'user': _public_user(_current_user())})
+
+
+# =====================================================================
+#  Versus Guild Portal (page racine) : Register par code d'invitation
+#  + liste des groupes enregistres (points de la "Registered Arena").
+#  Les codes/waitlist sont ecrits par le bot a la promotion admin.
+# =====================================================================
+@app.route('/api/versus/register', methods=['POST'])
+def versus_register():
+    """Valide un code d'invitation saisi sur la page racine. Si le code existe,
+    marque le groupe comme enregistre (invitation_codes + waitlist) et renvoie la
+    cible de redirection (/home). 404 si le code est inconnu."""
+    data = request.get_json(silent=True) or {}
+    code = (data.get('code') or '').strip()
+    if not code:
+        return jsonify({'success': False, 'error': 'missing_code'}), 400
+    doc = invitation_codes.find_one({'code': code})
+    if not doc:
+        return jsonify({'success': False, 'error': 'invalid_code'}), 404
+    now = time.time()
+    invitation_codes.update_one(
+        {'_id': doc['_id']},
+        {'$set': {'registered': True, 'registered_at': now}},
+    )
+    if doc.get('group_id') is not None:
+        versus_waitlist.update_one(
+            {'group_id': doc['group_id']},
+            {'$set': {'registered': True, 'registered_at': now}},
+        )
+    return jsonify({'success': True, 'redirect': '/home'})
+
+
+@app.route('/api/versus/registered-groups', methods=['GET'])
+def versus_registered_groups():
+    """Groupes enregistres (waitlist) -> un point par groupe dans l'Arena.
+    Photo servie via l'endpoint existant /api/group-photo/<group_id>."""
+    data = []
+    for g in versus_waitlist.find({}, {'group_id': 1, 'group_name': 1}):
+        gid = g.get('group_id')
+        if gid is None:
+            continue
+        data.append({'group_id': gid, 'group_name': g.get('group_name') or 'Unknown'})
+    return jsonify({'success': True, 'data': data})
 
 
 _tg_config_cache = None  # {'bot_id':..., 'bot_username':...}

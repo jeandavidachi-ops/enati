@@ -604,7 +604,7 @@ export default function Versus() {
         <div ref={lbTopRef} className="sticky top-0 z-50 bg-[#0b0b0c]">
         <header className="pl-6 pr-4 sm:pr-6 lg:pr-10 xl:pr-16 2xl:pr-24 py-5">
           <div className="w-full flex items-center gap-6">
-          <span onClick={() => { setSelectedUser(null); window.scrollTo(0, 0); }} style={{ fontFamily: "Arial, Helvetica, sans-serif" }} className="text-2xl font-semibold tracking-[0.15em] italic select-none text-zinc-300 cursor-pointer hover:text-white transition-colors">VERSUS</span>
+          <Link to="/home" onClick={() => { setSelectedUser(null); window.scrollTo(0, 0); }} style={{ fontFamily: "Arial, Helvetica, sans-serif" }} className="text-2xl font-semibold tracking-[0.15em] italic select-none text-zinc-300 cursor-pointer hover:text-white transition-colors">VERSUS</Link>
           <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-300">
             <Link className="hover:text-white" to="/ticker">Tickers</Link>
             <Link className="hover:text-white" to="/group">Groups</Link>

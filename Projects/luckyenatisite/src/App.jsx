@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Home from './pages/Home.jsx'
+import Portal from './pages/Portal.jsx'
 import Leaderboards from './pages/Leaderboards.jsx'
 import Explore from './pages/Explore.jsx'
 import GroupProfile from './pages/GroupProfile.jsx'
@@ -26,7 +27,8 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<Portal />} />
+      <Route path="/home" element={<Home />} />
       <Route path="/leaderboard" element={<Leaderboards />} />
       <Route path="/leaderboards" element={<Leaderboards />} />
       <Route path="/ticker" element={<Explore type="ticker" />} />

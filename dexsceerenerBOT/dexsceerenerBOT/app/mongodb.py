@@ -2,6 +2,7 @@ from pymongo import MongoClient
 from bson.binary import Binary
 import requests
 import time
+import secrets
 import app.dexscreenerAPI as dex
 
 from datetime import datetime, timedelta
@@ -24,6 +25,47 @@ db = client['enati']
 users_collection = db['coins']
 monitoring_collection = db['monitoring']  # compteur des tokens actuellement monitores
 media_collection = db['media']            # images persistantes (partage avec le serveur web)
+# Onboarding "Versus Guild Portal" : codes d'invitation generes a la promotion admin
+# du bot + waitlist des groupes enregistres (points de l'Arena cote site).
+invitation_codes = db['versus_invitation_codes']
+versus_waitlist = db['versus_waitlist']
+try:
+    invitation_codes.create_index('code', unique=True)
+    invitation_codes.create_index('group_id', unique=True)
+    versus_waitlist.create_index('group_id', unique=True)
+except Exception as _e:
+    print('versus onboarding index setup:', _e)
+
+
+def register_group_promotion(group_id, group_name, group_photo=None):
+    """Appele quand le bot devient admin d'un groupe. Genere (une seule fois par
+    groupe) un code d'invitation + un referral code, ajoute le groupe a la waitlist,
+    et renvoie (code, referral_code, already_existed). Idempotent : un groupe deja
+    connu renvoie ses codes existants sans creer de doublon ni rien re-generer."""
+    existing = invitation_codes.find_one({'group_id': group_id})
+    if existing:
+        return existing['code'], existing.get('referral_code'), True
+
+    code = secrets.token_urlsafe(6)
+    referral_code = secrets.token_hex(4)
+    now = time.time()
+    invitation_codes.insert_one({
+        'code': code,
+        'group_id': group_id,
+        'group_name': group_name,
+        'referral_code': referral_code,
+        'created_at': now,
+        'registered': False,
+        'registered_at': None,
+    })
+    versus_waitlist.update_one(
+        {'group_id': group_id},
+        {'$set': {'group_name': group_name, 'group_photo': group_photo,
+                  'registered': False},
+         '$setOnInsert': {'added_at': now}},
+        upsert=True,
+    )
+    return code, referral_code, False
 
 
 def store_token_image(address, image_url):

@@ -4,6 +4,7 @@ from aiogram.exceptions import TelegramMigrateToChat
 from config import TOKEN
 from app.user_handlers import user_handlers
 from app.admin_handlers import admin_handlers
+from app.onboarding_handlers import onboarding_handlers
 import app.mongodb as md
 
 bot = Bot(token=TOKEN)
@@ -39,6 +40,7 @@ async def market_watcher():
 async def main():
     dp.include_router(user_handlers)
     dp.include_router(admin_handlers)
+    dp.include_router(onboarding_handlers)
 
     # Lance le watcher en parallele du polling Telegram.
     asyncio.create_task(market_watcher())
