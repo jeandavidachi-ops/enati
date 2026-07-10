@@ -45,6 +45,35 @@ function VsLogo({ className = "" }) {
   return <img src="/images/versus.png" alt="Versus" className={"object-cover " + className} />;
 }
 
+// Un avatar de groupe (image ou fallback logo Versus) pour les bubbles.
+function GroupBubble({ id, className }) {
+  const [err, setErr] = useState(false);
+  const src = "/api/group-photo/" + id;
+  if (src && !err) {
+    return <img src={src} onError={() => setErr(true)} className={"object-cover bg-zinc-800 " + className} />;
+  }
+  return <span className={"overflow-hidden bg-[#0d0d0d] " + className}><VsLogo className="w-full h-full" /></span>;
+}
+// Bubbles de groupes (avatars empiles, 3 max, puis "+N") pour la stat "Groups".
+function GroupBubbles({ ids = [] }) {
+  if (!ids.length) return <span className="text-zinc-500">—</span>;
+  const shown = ids.slice(0, 3);
+  const more = ids.length - shown.length;
+  return (
+    <div className="flex items-center">
+      {shown.map((id, i) => (
+        <GroupBubble key={id} id={id}
+          className={"w-6 h-6 rounded-full ring-2 ring-[#0b0b0c] shrink-0" + (i > 0 ? " -ml-2" : "")} />
+      ))}
+      {more > 0 && (
+        <span className="-ml-2 flex items-center justify-center w-6 h-6 rounded-full ring-2 ring-[#0b0b0c] bg-zinc-800 text-[10px] font-medium text-zinc-200 shrink-0">
+          +{more}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // ---- Carte "Blocks" (reprise de l'accueil) ----
 function BlocksThumb({ src, g, e }) {
   const [err, setErr] = useState(false);
@@ -187,7 +216,7 @@ export default function App({ type = "group" }) {
 
   const sharedMap = useMemo(() => {
     const map = {};
-    (sharedRes?.data || []).forEach(c => { if (c.contract_address) map[String(c.contract_address).toLowerCase()] = c.groups_count; });
+    (sharedRes?.data || []).forEach(c => { if (c.contract_address) map[String(c.contract_address).toLowerCase()] = { count: c.groups_count, ids: c.group_ids || [] }; });
     return map;
   }, [sharedRes]);
 
@@ -305,7 +334,7 @@ export default function App({ type = "group" }) {
                       stats={[
                         { label: "Best", value: d.mult + "x", positive: true },
                         { label: "MC", value: d.mc },
-                        { label: "Groups", value: (d.addr && sharedMap[String(d.addr).toLowerCase()]) || 1 },
+                        { label: "Groups", value: <GroupBubbles ids={(d.addr && sharedMap[String(d.addr).toLowerCase()]?.ids) || []} /> },
                       ]} />
                   ))}
             </div>

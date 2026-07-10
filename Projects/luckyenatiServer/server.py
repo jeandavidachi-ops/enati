@@ -940,6 +940,7 @@ def get_all_groups_stats():
                     'max_current_stat': {'$max': '$current_stat'},
                     'created_at': {'$min': '$creation_time'},  # 1er call du groupe -> tri "New Groups"
                     'last_activity': {'$max': '$creation_time'},  # dernier call -> filtre "Active Today"
+                    'contracts': {'$push': {'addr': '$contract_address', 't': '$creation_time'}},  # tokens tradés (pour les bubbles)
                     'total_members': {'$sum': 1}  # Количество записей в группе
                 }
             },
@@ -981,6 +982,20 @@ def get_all_groups_stats():
         formatted_stats = []
         for group in groups_stats:
             gm = meta_map.get(group['_id'], {})
+            # Tokens distincts tradés par le groupe, ordre de récence (creation_time desc).
+            # 3 plus récents (URLs token-photo) + compte des restants -> bubbles du menu.
+            contracts_sorted = sorted(
+                (c for c in (group.get('contracts') or []) if c and c.get('addr')),
+                key=lambda c: (c.get('t') or 0), reverse=True,
+            )
+            distinct_tokens = []
+            seen = set()
+            for c in contracts_sorted:
+                addr = c['addr']
+                if addr in seen:
+                    continue
+                seen.add(addr)
+                distinct_tokens.append(addr)
             formatted_group = {
                 'group_id': group['_id'],
                 'group_name': group['group_name'],
@@ -995,6 +1010,8 @@ def get_all_groups_stats():
                 'last_activity': group.get('last_activity'),
                 'member_count': gm.get('member_count'),
                 'is_public': gm.get('is_public'),
+                'recent_tokens': [f"/api/token-photo/{addr}" for addr in distinct_tokens[:3]],
+                'tokens_more': max(0, len(distinct_tokens) - 3),
                 'win_rate': round(group['win_rate'], 2)  # Округляем до 2 знаков после запятой
             }
             formatted_stats.append(formatted_group)

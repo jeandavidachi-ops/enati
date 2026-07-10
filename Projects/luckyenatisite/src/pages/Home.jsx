@@ -78,6 +78,26 @@ function Avatar({ src, g, e, className }) {
 function VsLogo({ className = "" }) {
   return <img src="/images/versus.png" alt="Versus" className={"object-cover " + className} />;
 }
+// Bubbles de groupes (avatars empiles, 3 max, puis "+N") pour la stat "Groups"
+// des cards de tickers. ids = liste de group_id.
+function GroupBubbles({ ids = [] }) {
+  if (!ids.length) return <span className="text-zinc-500">—</span>;
+  const shown = ids.slice(0, 3);
+  const more = ids.length - shown.length;
+  return (
+    <div className="flex items-center">
+      {shown.map((id, i) => (
+        <Avatar key={id} src={"/api/group-photo/" + id}
+          className={"w-6 h-6 rounded-full ring-2 ring-[#0b0b0c]" + (i > 0 ? " -ml-2" : "")} />
+      ))}
+      {more > 0 && (
+        <span className="-ml-2 flex items-center justify-center w-6 h-6 rounded-full ring-2 ring-[#0b0b0c] bg-zinc-800 text-[10px] font-medium text-zinc-200">
+          +{more}
+        </span>
+      )}
+    </div>
+  );
+}
 function Stat({ label, value, valueClass = "text-white" }) {
   return (
     <div>
@@ -331,10 +351,11 @@ const LeaderboardSidebar = React.memo(function LeaderboardSidebar({ collapsed, o
           </div>
           <div className="dash"></div>
           <div className="rows" ref={lbRowsRef}>
-            {rows.map((row, i) => (
-              <div className="row flip-el" key={row.id != null ? row.id : i} data-flip-id={String(row.id != null ? row.id : row.name)}
-                onClick={() => row.id != null && onSelectUser && onSelectUser(row.id)}
-                onMouseEnter={() => row.id != null && apiFetch("/api/user/" + row.id + "/profile")}
+            {rows.map((row, i) => {
+              const RowTag = row.id != null ? Link : "div";
+              return (
+              <RowTag className="row flip-el" key={row.id != null ? row.id : i} data-flip-id={String(row.id != null ? row.id : row.name)}
+                {...(row.id != null ? { to: "/group/" + row.id, onMouseEnter: () => apiFetch("/api/group/" + row.id) } : {})}
                 style={{ cursor: row.id != null ? 'pointer' : 'default' }}>
                 <LbMedal rank={String(i + 1)} />
                 <Avatar src={row.img} g={row.g} e={row.e} className="avatar" />
@@ -353,8 +374,9 @@ const LeaderboardSidebar = React.memo(function LeaderboardSidebar({ collapsed, o
                     </div>
                   )}
                 </div>
-              </div>
-            ))}
+              </RowTag>
+              );
+            })}
           </div>
         </div>
         )}
@@ -483,11 +505,11 @@ export default function Versus() {
     tokensMore: c.tokens_more || 0,
   })), [callersRes]);
 
-  // Nombre de groupes par token (contract_address -> groups_count)
+  // Groupes par token (contract_address -> { count, ids }) pour les bubbles.
   const sharedMap = useMemo(() => {
     const map = {};
     (sharedRes?.data || []).forEach(c => {
-      if (c.contract_address) map[String(c.contract_address).toLowerCase()] = c.groups_count;
+      if (c.contract_address) map[String(c.contract_address).toLowerCase()] = { count: c.groups_count, ids: c.group_ids || [] };
     });
     return map;
   }, [sharedRes]);
@@ -503,6 +525,17 @@ export default function Versus() {
     img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
     g: gradOf(i), e: emojiOf(i),
   })), [groupsStats, groupSort, groupFilters]);
+
+  // Menu de gauche (onglet Leaderboard) : liste des groupes classes, avec les
+  // tokens trades par le groupe en badges de droite.
+  const lbGroups = useMemo(() => (groupsStats?.data || []).map((g, i) => ({
+    id: g.group_id,
+    name: g.group_name || "Unknown",
+    img: g.group_id ? ("/api/group-photo/" + g.group_id) : null,
+    tokens: g.recent_tokens || [],
+    tokensMore: g.tokens_more || 0,
+    g: gradOf(i), e: emojiOf(i),
+  })), [groupsStats]);
 
   // Re-mesure quand la bande Groups se remplit (change sa hauteur)
   useEffect(() => {
@@ -548,7 +581,7 @@ export default function Versus() {
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0b0c] font-mono text-white">
       <div className="hidden lg:block lb-fixed" style={{ top: lbTop }}>
-        <LeaderboardSidebar collapsed={lbCollapsed} onToggle={toggleLb} rows={lbUsers} tokens={tickers} onSelectUser={setSelectedUser} myPhoto={myPhoto} />
+        <LeaderboardSidebar collapsed={lbCollapsed} onToggle={toggleLb} rows={lbGroups} tokens={tickers} myPhoto={myPhoto} />
       </div>
       <div className="flex flex-col flex-1 bg-[#0b0b0c]">
         <div ref={lbTopRef} className="sticky top-0 z-50 bg-[#0b0b0c]">
@@ -636,7 +669,7 @@ export default function Versus() {
                   stats={[
                     { label: "Best", value: d.mult + "x", positive: true },
                     { label: "MC", value: d.mc },
-                    { label: "Groups", value: (d.addr && sharedMap[String(d.addr).toLowerCase()]) || 1 },
+                    { label: "Groups", value: <GroupBubbles ids={(d.addr && sharedMap[String(d.addr).toLowerCase()]?.ids) || []} /> },
                   ]} />
               ))}
             </div>

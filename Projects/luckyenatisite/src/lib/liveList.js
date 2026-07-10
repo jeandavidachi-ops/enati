@@ -137,9 +137,12 @@ function groupSortByOption(key) {
   }
 }
 
-// Comparateur tickers selon la cle du chip. sharedMap: addr(lower) -> groups_count.
+// Comparateur tickers selon la cle du chip. sharedMap: addr(lower) -> { count, ids }.
 export function tickerComparator(key, sharedMap = {}) {
-  const gc = (x) => sharedMap[String(x.contract_address || '').toLowerCase()] || 0
+  const gc = (x) => {
+    const v = sharedMap[String(x.contract_address || '').toLowerCase()]
+    return (typeof v === 'object' ? (v && v.count) : v) || 0
+  }
   switch (key) {
     case 'market-cap': return (a, b) => (b.market_cap || 0) - (a.market_cap || 0)
     case 'oldest': return (a, b) => parseTs(a.creation_time) - parseTs(b.creation_time)
