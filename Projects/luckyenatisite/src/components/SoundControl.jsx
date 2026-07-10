@@ -12,8 +12,9 @@ export default function SoundControl() {
     <div
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
-      style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 50, display: 'flex', alignItems: 'center', gap: 12,
-        padding: '10px 14px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)',
+      style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 50, display: 'flex', alignItems: 'center',
+        gap: open ? 12 : 0, padding: open ? '10px 16px' : 10, borderRadius: 999,
+        border: '1px solid rgba(255,255,255,0.12)', transition: 'gap .25s ease, padding .25s ease',
         background: 'rgba(11,13,16,0.82)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
         boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
 
@@ -22,7 +23,7 @@ export default function SoundControl() {
         onChange={(e) => setVolume(parseFloat(e.target.value))}
         aria-label="Volume"
         style={{ width: open ? 96 : 0, opacity: open ? 1 : 0, transition: 'width .25s ease, opacity .2s ease',
-          accentColor: '#ffffff', cursor: 'pointer', height: 4 }} />
+          accentColor: '#ffffff', cursor: 'pointer', height: 4, margin: 0, flex: 'none' }} />
 
       {/* Bouton haut-parleur */}
       <button onClick={toggleMute} aria-label={off ? 'Activer le son' : 'Couper le son'}
