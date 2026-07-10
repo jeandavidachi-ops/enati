@@ -121,12 +121,26 @@ function Arena({ groups }) {
       const cx = sx(s.x), cy = sy(s.y)
       const isFilled = i < filled
       if (isFilled) {
-        // FIX hover : la hitbox (cercle plein) reste TOUJOURS rendue ; l'anneau de
-        // surbrillance est un element separe en pointerEvents:none. Le curseur ne
-        // quitte jamais le cercle -> le hover ne s'active qu'une seule fois.
-        els.push(<circle key={'s' + i} cx={cx} cy={cy} r={seatR} fill="url(#seatGrad)"
-          style={{ cursor: 'pointer' }}
-          onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)} />)
+        // Siege d'un groupe inscrit : fond blanc (fallback) + photo du groupe par
+        // dessus, clippee en cercle. Si la photo est absente/404, le fond blanc reste.
+        // FIX hover : un cercle transparent au-dessus sert de hitbox stable (les
+        // visuels sont en pointerEvents:none) -> le hover ne clignote pas.
+        const g = groups[i]
+        const gid = g && g.group_id
+        els.push(
+          <g key={'s' + i}>
+            <clipPath id={'seatClip' + i}><circle cx={cx} cy={cy} r={seatR} /></clipPath>
+            <circle cx={cx} cy={cy} r={seatR} fill="url(#seatGrad)" pointerEvents="none" />
+            {gid != null && (
+              <image href={`/api/group-photo/${gid}`} x={cx - seatR} y={cy - seatR}
+                width={seatR * 2} height={seatR * 2} clipPath={`url(#seatClip${i})`}
+                preserveAspectRatio="xMidYMid slice" pointerEvents="none" />
+            )}
+            <circle cx={cx} cy={cy} r={seatR} fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1" pointerEvents="none" />
+            <circle cx={cx} cy={cy} r={seatR} fill="transparent" style={{ cursor: 'pointer' }}
+              onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)} />
+          </g>
+        )
         if (hovered === i) {
           els.push(<circle key={'h' + i} cx={cx} cy={cy} r={seatR + 2} fill="none" stroke="#ffffff" strokeWidth="1.6" pointerEvents="none" />)
         }

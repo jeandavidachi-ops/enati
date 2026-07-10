@@ -404,8 +404,13 @@ def group_photo(group_id):
 
     # 1) URL stockee dans la base (marche meme si le bot a quitte le groupe).
     #    On la fetch cote serveur -> le token present dans l'URL n'est jamais expose au navigateur.
+    #    On regarde d'abord dans 'coins' (calls) puis dans la waitlist d'onboarding
+    #    (photos des groupes inscrits via le portail Versus).
     doc = users_collection.find_one({'group_id': gid}, {'group_photo': 1})
     stored = (doc or {}).get('group_photo')
+    if not (stored and isinstance(stored, str) and stored.startswith('http')):
+        wl = versus_waitlist.find_one({'group_id': gid}, {'group_photo': 1})
+        stored = (wl or {}).get('group_photo')
     if stored and isinstance(stored, str) and stored.startswith('http'):
         try:
             img = requests.get(stored, timeout=15)
